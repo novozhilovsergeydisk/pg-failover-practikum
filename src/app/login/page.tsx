@@ -21,15 +21,13 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    setTimeout(() => {
-      const result = login(email, password);
-      if (result.success) {
-        window.location.href = "/";
-      } else {
-        setError(result.error || "Ошибка входа");
-      }
-      setLoading(false);
-    }, 500);
+    const result = await login(email, password);
+    if (result.success) {
+      window.location.href = "/";
+    } else {
+      setError(result.error || "Ошибка входа");
+    }
+    setLoading(false);
   };
 
   return (

@@ -34,15 +34,13 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    setTimeout(() => {
-      const result = register(name, email, password);
-      if (result.success) {
-        window.location.href = "/";
-      } else {
-        setError(result.error || "Ошибка регистрации");
-      }
-      setLoading(false);
-    }, 500);
+    const result = await register(name, email, password);
+    if (result.success) {
+      window.location.href = "/";
+    } else {
+      setError(result.error || "Ошибка регистрации");
+    }
+    setLoading(false);
   };
 
   return (

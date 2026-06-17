@@ -13,8 +13,8 @@ interface AuthContextType {
   isAdmin: boolean;
   userName: string;
   userEmail: string;
-  register: (name: string, email: string, password: string) => { success: boolean; error?: string };
-  login: (email: string, password: string) => { success: boolean; error?: string };
+  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -23,20 +23,13 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   userName: "",
   userEmail: "",
-  register: () => ({ success: false }),
-  login: () => ({ success: false }),
+  register: async () => ({ success: false }),
+  login: async () => ({ success: false }),
   logout: () => {},
 });
 
 export function useAuth() {
   return useContext(AuthContext);
-}
-
-interface StoredUser {
-  name: string;
-  email: string;
-  password: string;
-  role?: string;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -56,18 +49,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const getUsers = (): StoredUser[] => {
-    const raw = localStorage.getItem("users");
-    return raw ? JSON.parse(raw) : [];
-  };
+  const register = async (name: string, email: string, password: string) => {
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "register", name, email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.error };
 
-  const register = (name: string, email: string, password: string) => {
-    const users = getUsers();
-    if (users.some(u => u.email === email)) {
-      return { success: false, error: "Пользователь с таким email уже существует" };
-    }
-    users.push({ name, email, password });
-    localStorage.setItem("users", JSON.stringify(users));
     setIsLoggedIn(true);
     setUserName(name);
     setUserEmail(email);
@@ -76,18 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const login = (email: string, password: string) => {
-    const users = getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) {
-      return { success: false, error: "Неверный email или пароль" };
-    }
-    const userIsAdmin = user.role === "admin";
+  const login = async (email: string, password: string) => {
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "login", email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.error };
+
     setIsLoggedIn(true);
-    setUserName(user.name);
-    setUserEmail(user.email);
-    setIsAdmin(userIsAdmin);
-    localStorage.setItem("auth", JSON.stringify({ name: user.name, email: user.email, role: user.role || "user" }));
+    setUserName(data.user.name);
+    setUserEmail(data.user.email);
+    setIsAdmin(data.user.role === "admin");
+    localStorage.setItem("auth", JSON.stringify(data.user));
     return { success: true };
   };
 
