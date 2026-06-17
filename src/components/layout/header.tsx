@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 interface AuthContextType {
   isLoggedIn: boolean;
+  isAdmin: boolean;
   userName: string;
   userEmail: string;
   register: (name: string, email: string, password: string) => { success: boolean; error?: string };
@@ -19,6 +20,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
+  isAdmin: false,
   userName: "",
   userEmail: "",
   register: () => ({ success: false }),
@@ -34,10 +36,12 @@ interface StoredUser {
   name: string;
   email: string;
   password: string;
+  role?: string;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
 
@@ -48,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoggedIn(true);
       setUserName(data.name || "Пользователь");
       setUserEmail(data.email || "");
+      setIsAdmin(data.role === "admin");
     }
   }, []);
 
@@ -66,7 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoggedIn(true);
     setUserName(name);
     setUserEmail(email);
-    localStorage.setItem("auth", JSON.stringify({ name, email }));
+    setIsAdmin(false);
+    localStorage.setItem("auth", JSON.stringify({ name, email, role: "user" }));
     return { success: true };
   };
 
@@ -76,22 +82,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) {
       return { success: false, error: "Неверный email или пароль" };
     }
+    const userIsAdmin = user.role === "admin";
     setIsLoggedIn(true);
     setUserName(user.name);
     setUserEmail(user.email);
-    localStorage.setItem("auth", JSON.stringify({ name: user.name, email: user.email }));
+    setIsAdmin(userIsAdmin);
+    localStorage.setItem("auth", JSON.stringify({ name: user.name, email: user.email, role: user.role || "user" }));
     return { success: true };
   };
 
   const logout = () => {
     setIsLoggedIn(false);
+    setIsAdmin(false);
     setUserName("");
     setUserEmail("");
     localStorage.removeItem("auth");
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, userName, userEmail, register, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, isAdmin, userName, userEmail, register, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -103,13 +112,20 @@ interface HeaderProps {
 
 export function Header({ children }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isLoggedIn, userName, logout } = useAuth();
+  const { isLoggedIn, isAdmin, userName, logout } = useAuth();
   const router = useRouter();
 
   const handleLogout = () => {
     logout();
     router.push("/");
   };
+
+  const filteredChildren = Children.map(children, (child) => {
+    if (isValidElement(child) && (child.props as { href?: string }).href === "/admin" && !isAdmin) {
+      return null;
+    }
+    return child;
+  });
 
   return (
     <header className="sticky top-0 z-40 bg-[var(--bg-secondary)] border-b border-[var(--border-primary)]">
@@ -128,7 +144,7 @@ export function Header({ children }: HeaderProps) {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            {children}
+            {filteredChildren}
           </nav>
 
           {/* Right side */}
@@ -202,6 +218,9 @@ export function Header({ children }: HeaderProps) {
 
         <nav className="px-3 py-4 space-y-1">
           {Children.map(children, (child) => {
+            if (isValidElement(child) && (child.props as { href?: string }).href === "/admin" && !isAdmin) {
+              return null;
+            }
             if (isValidElement(child)) {
               return cloneElement(child as React.ReactElement<{ onClick?: () => void }>, {
                 onClick: () => setMobileMenuOpen(false),

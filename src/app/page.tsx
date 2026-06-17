@@ -2,8 +2,9 @@
 
 import { Header, NavLink } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { PracticumCard, ModuleCard } from "@/components/practicum/practicum-card";
-import { Terminal, BookOpen, Database, Shield, GitBranch, Settings, HelpCircle } from "lucide-react";
+import { Terminal, BookOpen, Database, Shield, GitBranch, Settings } from "lucide-react";
 
 export default function Home() {
   return (
@@ -130,36 +131,7 @@ export default function Home() {
         </section>
       </main>
 
-      {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--bg-secondary)] border-t border-[var(--border-primary)] z-50">
-        <div className="grid grid-cols-6 py-2">
-          <a href="/" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--accent-green)]">
-            <Database className="w-4 h-4" />
-            <span className="text-[10px]">Практикум</span>
-          </a>
-          <a href="/modules" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
-            <BookOpen className="w-4 h-4" />
-            <span className="text-[10px]">Модули</span>
-          </a>
-          <a href="/reference" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
-            <Terminal className="w-4 h-4" />
-            <span className="text-[10px]">Справочник</span>
-          </a>
-          <a href="/glossary" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
-            <BookOpen className="w-4 h-4" />
-            <span className="text-[10px]">Глоссарий</span>
-          </a>
-          <a href="/help" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
-            <HelpCircle className="w-4 h-4" />
-            <span className="text-[10px]">Справка</span>
-          </a>
-          <a href="/admin" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
-            <Settings className="w-4 h-4" />
-            <span className="text-[10px]">Управление</span>
-          </a>
-        </div>
-      </div>
-
+      <MobileNav activePage="/" />
       <Footer />
     </div>
   );
