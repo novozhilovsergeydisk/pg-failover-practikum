@@ -6,7 +6,7 @@ import { ModuleCard } from "@/components/practicum/practicum-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Database, Terminal, Shield, GitBranch, BookOpen, Clock, CheckCircle } from "lucide-react";
+import { Database, Terminal, Shield, GitBranch, BookOpen, Clock, CheckCircle, HelpCircle } from "lucide-react";
 
 export default function ModulesPage() {
   const modules = [
@@ -195,22 +195,30 @@ export default function ModulesPage() {
 
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--bg-secondary)] border-t border-[var(--border-primary)] z-50">
-        <div className="flex justify-around py-2">
-          <a href="/" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <Database className="w-5 h-5" />
-            <span className="text-xs">Практикум</span>
+        <div className="grid grid-cols-6 py-2">
+          <a href="/" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <Database className="w-4 h-4" />
+            <span className="text-[10px]">Практикум</span>
           </a>
-          <a href="/modules" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--accent-green)]">
-            <BookOpen className="w-5 h-5" />
-            <span className="text-xs">Модули</span>
+          <a href="/modules" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--accent-green)]">
+            <BookOpen className="w-4 h-4" />
+            <span className="text-[10px]">Модули</span>
           </a>
-          <a href="/reference" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <Terminal className="w-5 h-5" />
-            <span className="text-xs">Справочник</span>
+          <a href="/reference" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <Terminal className="w-4 h-4" />
+            <span className="text-[10px]">Справочник</span>
           </a>
-          <a href="/admin" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <Shield className="w-5 h-5" />
-            <span className="text-xs">Управление</span>
+          <a href="/glossary" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <BookOpen className="w-4 h-4" />
+            <span className="text-[10px]">Глоссарий</span>
+          </a>
+          <a href="/help" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <HelpCircle className="w-4 h-4" />
+            <span className="text-[10px]">Справка</span>
+          </a>
+          <a href="/admin" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <Shield className="w-4 h-4" />
+            <span className="text-[10px]">Управление</span>
           </a>
         </div>
       </div>

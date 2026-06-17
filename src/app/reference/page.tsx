@@ -7,7 +7,7 @@ import { CommandBlock } from "@/components/practicum/command-block";
 import { CodeBlock } from "@/components/ui/code-block";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Terminal, Database, Shield, GitBranch, Search, BookOpen } from "lucide-react";
+import { Terminal, Database, Shield, GitBranch, Search, BookOpen, HelpCircle } from "lucide-react";
 import { useState } from "react";
 
 export default function ReferencePage() {
@@ -16,7 +16,7 @@ export default function ReferencePage() {
   const commands = [
     {
       category: "Управление кластером",
-      icon: <Database className="w-5 h-5" />,
+      icon: <Database className="w-4 h-4" />,
       items: [
         {
           name: "pg_lsclusters",
@@ -43,7 +43,7 @@ export default function ReferencePage() {
     },
     {
       category: "Репликация",
-      icon: <GitBranch className="w-5 h-5" />,
+      icon: <GitBranch className="w-4 h-4" />,
       items: [
         {
           name: "pg_basebackup",
@@ -92,7 +92,7 @@ export default function ReferencePage() {
     },
     {
       category: "Безопасность",
-      icon: <Shield className="w-5 h-5" />,
+      icon: <Shield className="w-4 h-4" />,
       items: [
         {
           name: "Создание роли репликации",
@@ -138,7 +138,7 @@ export default function ReferencePage() {
     },
     {
       category: "Мониторинг",
-      icon: <Search className="w-5 h-5" />,
+      icon: <Search className="w-4 h-4" />,
       items: [
         {
           name: "Проверка WAL",
@@ -421,22 +421,30 @@ SELECT * FROM pg_extension;`}
 
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--bg-secondary)] border-t border-[var(--border-primary)] z-50">
-        <div className="flex justify-around py-2">
-          <a href="/" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <Database className="w-5 h-5" />
-            <span className="text-xs">Практикум</span>
+        <div className="grid grid-cols-6 py-2">
+          <a href="/" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <Database className="w-4 h-4" />
+            <span className="text-[10px]">Практикум</span>
           </a>
-          <a href="/modules" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <BookOpen className="w-5 h-5" />
-            <span className="text-xs">Модули</span>
+          <a href="/modules" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <BookOpen className="w-4 h-4" />
+            <span className="text-[10px]">Модули</span>
           </a>
-          <a href="/reference" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--accent-green)]">
-            <Terminal className="w-5 h-5" />
-            <span className="text-xs">Справочник</span>
+          <a href="/reference" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--accent-green)]">
+            <Terminal className="w-4 h-4" />
+            <span className="text-[10px]">Справочник</span>
           </a>
-          <a href="/admin" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <Shield className="w-5 h-5" />
-            <span className="text-xs">Управление</span>
+          <a href="/glossary" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <BookOpen className="w-4 h-4" />
+            <span className="text-[10px]">Глоссарий</span>
+          </a>
+          <a href="/help" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <HelpCircle className="w-4 h-4" />
+            <span className="text-[10px]">Справка</span>
+          </a>
+          <a href="/admin" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <Shield className="w-4 h-4" />
+            <span className="text-[10px]">Управление</span>
           </a>
         </div>
       </div>

@@ -3,7 +3,7 @@
 import { Header, NavLink } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { PracticumCard, ModuleCard } from "@/components/practicum/practicum-card";
-import { Terminal, BookOpen, Database, Shield, GitBranch, Settings } from "lucide-react";
+import { Terminal, BookOpen, Database, Shield, GitBranch, Settings, HelpCircle } from "lucide-react";
 
 export default function Home() {
   return (
@@ -114,8 +114,8 @@ export default function Home() {
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">
             Архитектура стенда
           </h2>
-          <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-6">
-            <div className="font-mono text-sm text-[var(--text-secondary)]">
+          <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-6 overflow-x-auto">
+            <div className="font-mono text-xs sm:text-sm text-[var(--text-secondary)] min-w-[500px]">
               <pre className="m-0">
 {`┌─────────────────────────────┐         ┌─────────────────────────────┐
 │   MASTER (источник)         │         │   REPLICA (приёмник)         │
@@ -132,22 +132,30 @@ export default function Home() {
 
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--bg-secondary)] border-t border-[var(--border-primary)] z-50">
-        <div className="flex justify-around py-2">
-          <a href="/" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--accent-green)]">
-            <Database className="w-5 h-5" />
-            <span className="text-xs">Практикум</span>
+        <div className="grid grid-cols-6 py-2">
+          <a href="/" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--accent-green)]">
+            <Database className="w-4 h-4" />
+            <span className="text-[10px]">Практикум</span>
           </a>
-          <a href="/modules" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <BookOpen className="w-5 h-5" />
-            <span className="text-xs">Модули</span>
+          <a href="/modules" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <BookOpen className="w-4 h-4" />
+            <span className="text-[10px]">Модули</span>
           </a>
-          <a href="/reference" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <Terminal className="w-5 h-5" />
-            <span className="text-xs">Справочник</span>
+          <a href="/reference" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <Terminal className="w-4 h-4" />
+            <span className="text-[10px]">Справочник</span>
           </a>
-          <a href="/admin" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <Settings className="w-5 h-5" />
-            <span className="text-xs">Управление</span>
+          <a href="/glossary" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <BookOpen className="w-4 h-4" />
+            <span className="text-[10px]">Глоссарий</span>
+          </a>
+          <a href="/help" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <HelpCircle className="w-4 h-4" />
+            <span className="text-[10px]">Справка</span>
+          </a>
+          <a href="/admin" className="flex flex-col items-center gap-1 px-1 py-2 text-[var(--text-muted)]">
+            <Settings className="w-4 h-4" />
+            <span className="text-[10px]">Управление</span>
           </a>
         </div>
       </div>
