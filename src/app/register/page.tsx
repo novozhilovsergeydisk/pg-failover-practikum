@@ -56,7 +56,7 @@ export default function RegisterPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left side - Info */}
-          <div>
+          <div className="order-2 lg:order-1">
             <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-4">
               Создайте аккаунт
             </h1>
@@ -105,7 +105,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Right side - Register Form */}
-          <div>
+          <div className="order-1 lg:order-2">
             <Card>
               <CardHeader>
                 <CardTitle>Регистрация</CardTitle>
