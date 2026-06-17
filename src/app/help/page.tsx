@@ -111,7 +111,7 @@ export default function HelpPage() {
               </AccordionItem>
 
               <AccordionItem value="item-4">
-                <AccordionTrigger>Можно ли повторять практику多次?</AccordionTrigger>
+                <AccordionTrigger>Можно ли повторять практику?</AccordionTrigger>
                 <AccordionContent>
                   Да! Используйте скрипт teardown.sh для удаления учебного кластера, затем запускайте create-master.sh и create-replica.sh заново. Порядок: сначала на реплике, потом на мастере.
                 </AccordionContent>
