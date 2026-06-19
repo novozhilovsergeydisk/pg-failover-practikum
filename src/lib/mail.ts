@@ -1,14 +1,19 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
+const smtpConfig: nodemailer.TransportOptions = {
   host: process.env.SMTP_HOST || "mail.appuse.ru",
   port: parseInt(process.env.SMTP_PORT || "587"),
   secure: false,
-  auth: {
-    user: process.env.SMTP_USER || "",
+};
+
+if (process.env.SMTP_USER) {
+  (smtpConfig as Record<string, unknown>).auth = {
+    user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS || "",
-  },
-});
+  };
+}
+
+const transporter = nodemailer.createTransport(smtpConfig);
 
 interface SendEmailOptions {
   to: string;
