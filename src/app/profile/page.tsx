@@ -24,18 +24,13 @@ export default function ProfilePage() {
   };
 
   const stats = [
-    { label: "Модулей завершено", value: "2 из 4", icon: <BookOpen className="w-5 h-5" /> },
-    { label: "Уроков пройдено", value: "14 из 30", icon: <Award className="w-5 h-5" /> },
-    { label: "Время обучения", value: "12 часов", icon: <Clock className="w-5 h-5" /> },
-    { label: "Текущий streak", value: "5 дней", icon: <Award className="w-5 h-5" /> },
+    { label: "Модулей завершено", value: "0 из 4", icon: <BookOpen className="w-5 h-5" /> },
+    { label: "Уроков пройдено", value: "0 из 30", icon: <Award className="w-5 h-5" /> },
+    { label: "Время обучения", value: "0 часов", icon: <Clock className="w-5 h-5" /> },
+    { label: "Текущий streak", value: "0 дней", icon: <Award className="w-5 h-5" /> },
   ];
 
-  const recentActivity = [
-    { module: "Основы потоковой репликации", lesson: "Настройка мастера", date: "2 часа назад", status: "completed" },
-    { module: "Основы потоковой репликации", lesson: "Настройка реплики", date: "5 часов назад", status: "completed" },
-    { module: "TLS и безопасность", lesson: "Генерация сертификатов", date: "Вчера", status: "in-progress" },
-    { module: "Failover и pg_rewind", lesson: "Повышение реплики", date: "2 дня назад", status: "available" },
-  ];
+  const recentActivity: { module: string; lesson: string; date: string; status: string }[] = [];
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -96,23 +91,23 @@ export default function ProfilePage() {
                 <div>
                   <div className="flex justify-between mb-1">
                     <span className="text-sm text-[var(--text-primary)]">Основы потоковой репликации</span>
-                    <span className="text-sm text-[var(--text-muted)]">75%</span>
+                    <span className="text-sm text-[var(--text-muted)]">0%</span>
                   </div>
-                  <Progress value={75} />
+                  <Progress value={0} />
                 </div>
                 <div>
                   <div className="flex justify-between mb-1">
                     <span className="text-sm text-[var(--text-primary)]">Физические слоты репликации</span>
-                    <span className="text-sm text-[var(--text-muted)]">50%</span>
+                    <span className="text-sm text-[var(--text-muted)]">0%</span>
                   </div>
-                  <Progress value={50} />
+                  <Progress value={0} />
                 </div>
                 <div>
                   <div className="flex justify-between mb-1">
                     <span className="text-sm text-[var(--text-primary)]">TLS и безопасность</span>
-                    <span className="text-sm text-[var(--text-muted)]">25%</span>
+                    <span className="text-sm text-[var(--text-muted)]">0%</span>
                   </div>
-                  <Progress value={25} />
+                  <Progress value={0} />
                 </div>
                 <div>
                   <div className="flex justify-between mb-1">
@@ -131,6 +126,9 @@ export default function ProfilePage() {
               <CardTitle>Последняя активность</CardTitle>
             </CardHeader>
             <CardContent>
+              {recentActivity.length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)] text-center py-4">Пока нет активности</p>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -161,6 +159,7 @@ export default function ProfilePage() {
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
         </div>
