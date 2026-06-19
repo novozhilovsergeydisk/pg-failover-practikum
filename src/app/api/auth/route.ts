@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import pool from "@/lib/db";
 import { signToken } from "@/lib/auth";
 
@@ -20,13 +21,23 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+
     await pool.query(
-      "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, 'user')",
-      [name, email, hashedPassword]
+      "INSERT INTO users (name, email, password, role, email_verified, verification_token) VALUES ($1, $2, $3, 'user', false, $4)",
+      [name, email, hashedPassword, verificationToken]
     );
 
-    const token = signToken({ name, email, role: "user" }, rememberMe);
-    return NextResponse.json({ success: true, user: { name, email, role: "user" }, token });
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    console.log(`\n=== Email Verification ===`);
+    console.log(`User: ${email}`);
+    console.log(`Verification link: ${siteUrl}/verify-email?token=${verificationToken}\n`);
+
+    return NextResponse.json({
+      success: true,
+      message: "Регистрация успешна. Проверьте email для подтверждения.",
+      verificationToken,
+    });
   }
 
   if (action === "login") {
@@ -35,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     const result = await pool.query(
-      "SELECT name, email, password, role FROM users WHERE email = $1",
+      "SELECT name, email, password, role, email_verified FROM users WHERE email = $1",
       [email]
     );
     if (result.rows.length === 0) {
@@ -46,6 +57,10 @@ export async function POST(request: Request) {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return NextResponse.json({ error: "Неверный email или пароль" }, { status: 401 });
+    }
+
+    if (!user.email_verified) {
+      return NextResponse.json({ error: "Email не подтверждён. Проверьте почту." }, { status: 403 });
     }
 
     const token = signToken({ name: user.name, email: user.email, role: user.role || "user" }, rememberMe);

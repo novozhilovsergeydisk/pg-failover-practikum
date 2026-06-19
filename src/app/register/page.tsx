@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verificationToken, setVerificationToken] = useState("");
   const { register } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -36,7 +37,11 @@ export default function RegisterPage() {
 
     const result = await register(name, email, password);
     if (result.success) {
-      window.location.href = "/";
+      if (result.verificationToken) {
+        setVerificationToken(result.verificationToken);
+      } else {
+        window.location.href = "/";
+      }
     } else {
       setError(result.error || "Ошибка регистрации");
     }
@@ -109,6 +114,27 @@ export default function RegisterPage() {
                 <CardTitle>Регистрация</CardTitle>
               </CardHeader>
               <CardContent>
+                {verificationToken ? (
+                  <div className="text-center py-4">
+                    <div className="p-4 rounded-md bg-[var(--accent-green)]/10 border border-[var(--accent-green)]/30 mb-4">
+                      <p className="text-[var(--accent-green)] font-medium mb-2">
+                        Регистрация успешна!
+                      </p>
+                      <p className="text-sm text-[var(--text-secondary)] mb-4">
+                        Для подтверждения email перейдите по ссылке:
+                      </p>
+                      <a
+                        href={`/verify-email?token=${verificationToken}`}
+                        className="text-sm text-[var(--accent-blue)] hover:underline break-all"
+                      >
+                        /verify-email?token={verificationToken}
+                      </a>
+                    </div>
+                    <Link href="/login">
+                      <Button variant="secondary">Перейти к входу</Button>
+                    </Link>
+                  </div>
+                ) : (
                 <form onSubmit={handleRegister} className="space-y-4">
                   {error && (
                     <div className="p-3 rounded-md bg-[var(--accent-red)]/10 border border-[var(--accent-red)]/30 text-[var(--accent-red)] text-sm">
@@ -151,6 +177,7 @@ export default function RegisterPage() {
                     {loading ? "Регистрация..." : "Зарегистрироваться"}
                   </Button>
                 </form>
+                )}
 
                 <div className="mt-6 text-center">
                   <p className="text-sm text-[var(--text-muted)]">

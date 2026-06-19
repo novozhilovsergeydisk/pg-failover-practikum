@@ -14,7 +14,7 @@ interface AuthContextType {
   userName: string;
   userEmail: string;
   token: string;
-  register: (name: string, email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string; verificationToken?: string }>;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   getAuthHeaders: () => { Authorization?: string };
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setToken(data.token || "");
     localStorage.setItem("auth", JSON.stringify({ name, email, role: "user", token: data.token }));
-    return { success: true };
+    return { success: true, verificationToken: data.verificationToken };
   };
 
   const login = async (email: string, password: string, rememberMe = false) => {
