@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcrypt";
 import pool from "@/lib/db";
+import { signToken } from "@/lib/auth";
 
 export async function POST(request: Request) {
   const { action, name, email, password } = await request.json();
@@ -17,11 +19,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Пользователь уже существует" }, { status: 409 });
     }
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     await pool.query(
       "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, 'user')",
-      [name, email, password]
+      [name, email, hashedPassword]
     );
-    return NextResponse.json({ success: true, user: { name, email, role: "user" } });
+
+    const token = signToken({ name, email, role: "user" });
+    return NextResponse.json({ success: true, user: { name, email, role: "user" }, token });
   }
 
   if (action === "login") {
@@ -30,17 +35,24 @@ export async function POST(request: Request) {
     }
 
     const result = await pool.query(
-      "SELECT name, email, role FROM users WHERE email = $1 AND password = $2",
-      [email, password]
+      "SELECT name, email, password, role FROM users WHERE email = $1",
+      [email]
     );
     if (result.rows.length === 0) {
       return NextResponse.json({ error: "Неверный email или пароль" }, { status: 401 });
     }
 
     const user = result.rows[0];
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return NextResponse.json({ error: "Неверный email или пароль" }, { status: 401 });
+    }
+
+    const token = signToken({ name: user.name, email: user.email, role: user.role || "user" });
     return NextResponse.json({
       success: true,
       user: { name: user.name, email: user.email, role: user.role || "user" },
+      token,
     });
   }
 

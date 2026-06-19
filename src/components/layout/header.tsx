@@ -13,9 +13,11 @@ interface AuthContextType {
   isAdmin: boolean;
   userName: string;
   userEmail: string;
+  token: string;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  getAuthHeaders: () => { Authorization?: string };
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,9 +25,11 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   userName: "",
   userEmail: "",
+  token: "",
   register: async () => ({ success: false }),
   login: async () => ({ success: false }),
   logout: () => {},
+  getAuthHeaders: () => ({}),
 });
 
 export function useAuth() {
@@ -37,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [token, setToken] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem("auth");
@@ -46,8 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserName(data.name || "Пользователь");
       setUserEmail(data.email || "");
       setIsAdmin(data.role === "admin");
+      setToken(data.token || "");
     }
   }, []);
+
+  const getAuthHeaders = () => {
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   const register = async (name: string, email: string, password: string) => {
     const res = await fetch("/api/auth", {
@@ -62,7 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserName(name);
     setUserEmail(email);
     setIsAdmin(false);
-    localStorage.setItem("auth", JSON.stringify({ name, email, role: "user" }));
+    setToken(data.token || "");
+    localStorage.setItem("auth", JSON.stringify({ name, email, role: "user", token: data.token }));
     return { success: true };
   };
 
@@ -79,7 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserName(data.user.name);
     setUserEmail(data.user.email);
     setIsAdmin(data.user.role === "admin");
-    localStorage.setItem("auth", JSON.stringify(data.user));
+    setToken(data.token || "");
+    localStorage.setItem("auth", JSON.stringify({ ...data.user, token: data.token }));
     return { success: true };
   };
 
@@ -88,11 +100,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setUserName("");
     setUserEmail("");
+    setToken("");
     localStorage.removeItem("auth");
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isAdmin, userName, userEmail, register, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, isAdmin, userName, userEmail, token, register, login, logout, getAuthHeaders }}>
       {children}
     </AuthContext.Provider>
   );

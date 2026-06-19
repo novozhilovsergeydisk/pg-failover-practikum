@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcrypt";
 import pool from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 
 export async function POST(request: Request) {
+  const admin = requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Требуется авторизация администратора" }, { status: 403 });
+  }
+
   const { email, newPassword } = await request.json();
 
   if (!email || !newPassword) {
@@ -18,9 +25,10 @@ export async function POST(request: Request) {
     );
   }
 
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
   const result = await pool.query(
     "UPDATE users SET password = $1 WHERE email = $2 RETURNING id",
-    [newPassword, email]
+    [hashedPassword, email]
   );
 
   if (result.rows.length === 0) {

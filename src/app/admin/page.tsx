@@ -11,27 +11,50 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { Terminal, Database, Users, Settings, Shield, Plus, Edit, Trash2, HelpCircle, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  created_at: string;
+}
 
 export default function AdminPage() {
-  const { isAdmin, isLoggedIn } = useAuth();
+  const { isAdmin, isLoggedIn, getAuthHeaders } = useAuth();
   const router = useRouter();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn || !isAdmin) {
       router.push("/");
+      return;
     }
-  }, [isLoggedIn, isAdmin, router]);
+
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch("/api/admin/users", {
+          headers: getAuthHeaders(),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUsers(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [isLoggedIn, isAdmin, router, getAuthHeaders]);
 
   if (!isLoggedIn || !isAdmin) {
     return null;
   }
-  const users = [
-    { id: 1, name: "Иван Петров", email: "ivan@example.com", role: "student", status: "active", lastActive: "2 мин назад" },
-    { id: 2, name: "Мария Сидорова", email: "maria@example.com", role: "student", status: "active", lastActive: "15 мин назад" },
-    { id: 3, name: "Алексей Козлов", email: "alexey@example.com", role: "admin", status: "active", lastActive: "1 час назад" },
-    { id: 4, name: "Елена Новикова", email: "elena@example.com", role: "student", status: "inactive", lastActive: "3 дня назад" },
-  ];
 
   const modules = [
     { id: 1, title: "Основы потоковой репликации", lessons: 8, status: "published" },
@@ -71,8 +94,8 @@ export default function AdminPage() {
                   <Users className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-[var(--text-primary)]">24</p>
-                  <p className="text-xs text-[var(--text-muted)]">Студентов</p>
+                  <p className="text-2xl font-bold text-[var(--text-primary)]">{users.length}</p>
+                  <p className="text-xs text-[var(--text-muted)]">Пользователей</p>
                 </div>
               </div>
             </CardContent>
@@ -131,23 +154,24 @@ export default function AdminPage() {
               </div>
             </CardHeader>
             <CardContent>
+              {loading ? (
+                <p className="text-sm text-[var(--text-muted)] text-center py-4">Загрузка...</p>
+              ) : users.length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)] text-center py-4">Нет пользователей</p>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Имя</TableHead>
                     <TableHead>Роль</TableHead>
-                    <TableHead>Статус</TableHead>
-                    <TableHead>Действия</TableHead>
+                    <TableHead>Email</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
-                        <div>
-                          <p className="font-medium text-[var(--text-primary)]">{user.name}</p>
-                          <p className="text-xs text-[var(--text-muted)]">{user.email}</p>
-                        </div>
+                        <p className="font-medium text-[var(--text-primary)]">{user.name}</p>
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.role === "admin" ? "purple" : "blue"}>
@@ -155,25 +179,13 @@ export default function AdminPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <StatusIndicator
-                          status={user.status === "active" ? "online" : "offline"}
-                          label={user.lastActive}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        <span className="text-sm text-[var(--text-muted)]">{user.email}</span>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
 

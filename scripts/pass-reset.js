@@ -6,10 +6,11 @@ async function resetPassword() {
   const args = process.argv.slice(2);
   const email = args[0];
   const newPassword = args[1];
+  const token = args[2];
 
   if (!email || !newPassword) {
-    console.error("Использование: npm run pass:reset <email> <новый_пароль>");
-    console.error("Пример: npm run pass:reset admin@koderstudio.ru mypassword123");
+    console.error("Использование: npm run pass:reset <email> <новый_пароль> [token]");
+    console.error("Пример: npm run pass:reset admin@koderstudio.ru mypassword123 <jwt-token>");
     process.exit(1);
   }
 
@@ -18,10 +19,15 @@ async function resetPassword() {
     process.exit(1);
   }
 
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   try {
     const response = await fetch(`${BASE_URL}/api/admin/reset-password`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ email, newPassword }),
     });
 

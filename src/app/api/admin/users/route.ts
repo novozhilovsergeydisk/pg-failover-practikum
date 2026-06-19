@@ -1,12 +1,24 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcrypt";
 import pool from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const admin = requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Требуется авторизация администратора" }, { status: 403 });
+  }
+
   const result = await pool.query("SELECT id, name, email, role, created_at FROM users ORDER BY id");
   return NextResponse.json(result.rows);
 }
 
 export async function POST(request: Request) {
+  const admin = requireAdmin(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Требуется авторизация администратора" }, { status: 403 });
+  }
+
   const { name, email, password, role } = await request.json();
 
   if (!email || !password) {
@@ -18,9 +30,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Пользователь уже существует" }, { status: 409 });
   }
 
+  const hashedPassword = await bcrypt.hash(password, 10);
   await pool.query(
     "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4)",
-    [name, email, password, role || "user"]
+    [name, email, hashedPassword, role || "user"]
   );
 
   return NextResponse.json({ success: true });

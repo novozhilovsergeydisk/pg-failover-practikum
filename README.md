@@ -23,8 +23,10 @@ npm run dev
 
 ## Сброс пароля
 
+Требуется JWT токен администратора:
+
 ```bash
-npm run pass:reset admin@koderstudio.ru mypassword123
+npm run pass:reset admin@koderstudio.ru mypassword123 <jwt-token>
 ```
 
 ## Управление задачами
@@ -45,7 +47,9 @@ npm run task remove <id>
 - Next.js 16 + React 19
 - TypeScript
 - Tailwind CSS 4
-- PostgreSQL (для практикума)
+- PostgreSQL (для практикума и авторизации)
+- bcrypt (хеширование паролей)
+- JWT (сессии)
 
 ## Структура
 
@@ -53,9 +57,8 @@ npm run task remove <id>
 src/
 ├── app/            # Страницы и API
 ├── components/     # UI компоненты
-├── lib/            # Утилиты
+├── lib/            # Утилиты (auth, db, utils)
 scripts/            # CLI скрипты
-data/               # Данные пользователей (users.json)
 ```
 
 ## Деплой
