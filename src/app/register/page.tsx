@@ -16,7 +16,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [verificationToken, setVerificationToken] = useState("");
+  const [success, setSuccess] = useState(false);
   const { register } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -37,11 +37,7 @@ export default function RegisterPage() {
 
     const result = await register(name, email, password);
     if (result.success) {
-      if (result.verificationToken) {
-        setVerificationToken(result.verificationToken);
-      } else {
-        window.location.href = "/";
-      }
+      setSuccess(true);
     } else {
       setError(result.error || "Ошибка регистрации");
     }
@@ -114,21 +110,16 @@ export default function RegisterPage() {
                 <CardTitle>Регистрация</CardTitle>
               </CardHeader>
               <CardContent>
-                {verificationToken ? (
+                {success ? (
                   <div className="text-center py-4">
                     <div className="p-4 rounded-md bg-[var(--accent-green)]/10 border border-[var(--accent-green)]/30 mb-4">
                       <p className="text-[var(--accent-green)] font-medium mb-2">
                         Регистрация успешна!
                       </p>
-                      <p className="text-sm text-[var(--text-secondary)] mb-4">
-                        Для подтверждения email перейдите по ссылке:
+                      <p className="text-sm text-[var(--text-secondary)]">
+                        Письмо с ссылкой для подтверждения email отправлено на <span className="font-medium">{email}</span>.
+                        Проверьте почту и перейдите по ссылке для завершения регистрации.
                       </p>
-                      <a
-                        href={`/verify-email?token=${verificationToken}`}
-                        className="text-sm text-[var(--accent-blue)] hover:underline break-all"
-                      >
-                        /verify-email?token={verificationToken}
-                      </a>
                     </div>
                     <Link href="/login">
                       <Button variant="secondary">Перейти к входу</Button>

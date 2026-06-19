@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import pool from "@/lib/db";
 import { signToken } from "@/lib/auth";
+import { sendEmail, buildVerificationEmail } from "@/lib/mail";
 
 export async function POST(request: Request) {
   const { action, name, email, password, rememberMe } = await request.json();
@@ -29,14 +30,18 @@ export async function POST(request: Request) {
     );
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const verificationUrl = `${siteUrl}/verify-email?token=${verificationToken}`;
+    
     console.log(`\n=== Email Verification ===`);
     console.log(`User: ${email}`);
-    console.log(`Verification link: ${siteUrl}/verify-email?token=${verificationToken}\n`);
+    console.log(`Verification link: ${verificationUrl}\n`);
+
+    const emailContent = buildVerificationEmail(name, verificationUrl);
+    await sendEmail({ to: email, subject: emailContent.subject, html: emailContent.html });
 
     return NextResponse.json({
       success: true,
       message: "Регистрация успешна. Проверьте email для подтверждения.",
-      verificationToken,
     });
   }
 
