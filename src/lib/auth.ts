@@ -9,8 +9,8 @@ export interface AuthPayload {
   role: string;
 }
 
-export function signToken(payload: AuthPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+export function signToken(payload: AuthPayload, rememberMe = false): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: rememberMe ? "30d" : "24h" });
 }
 
 export function verifyToken(token: string): AuthPayload | null {

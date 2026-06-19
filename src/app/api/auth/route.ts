@@ -4,7 +4,7 @@ import pool from "@/lib/db";
 import { signToken } from "@/lib/auth";
 
 export async function POST(request: Request) {
-  const { action, name, email, password } = await request.json();
+  const { action, name, email, password, rememberMe } = await request.json();
 
   if (action === "register") {
     if (!name || !email || !password) {
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       [name, email, hashedPassword]
     );
 
-    const token = signToken({ name, email, role: "user" });
+    const token = signToken({ name, email, role: "user" }, rememberMe);
     return NextResponse.json({ success: true, user: { name, email, role: "user" }, token });
   }
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Неверный email или пароль" }, { status: 401 });
     }
 
-    const token = signToken({ name: user.name, email: user.email, role: user.role || "user" });
+    const token = signToken({ name: user.name, email: user.email, role: user.role || "user" }, rememberMe);
     return NextResponse.json({
       success: true,
       user: { name: user.name, email: user.email, role: user.role || "user" },

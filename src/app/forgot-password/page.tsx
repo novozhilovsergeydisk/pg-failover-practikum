@@ -1,32 +1,43 @@
 "use client";
 
 import { useState } from "react";
-import { Header, NavLink, useAuth } from "@/components/layout/header";
+import { Header, NavLink } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Database, Terminal, Shield, GitBranch } from "lucide-react";
+import { Database, Terminal, Shield, GitBranch, Mail, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const [success, setSuccess] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const result = await login(email, password, rememberMe);
-    if (result.success) {
-      window.location.href = "/";
-    } else {
-      setError(result.error || "Ошибка входа");
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Ошибка отправки");
+        setLoading(false);
+        return;
+      }
+
+      setSuccess(true);
+    } catch {
+      setError("Ошибка подключения к серверу");
     }
     setLoading(false);
   };
@@ -44,10 +55,10 @@ export default function LoginPage() {
           {/* Left side - Info */}
           <div className="order-2 lg:order-1">
             <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-4">
-              Добро пожаловать
+              Восстановление пароля
             </h1>
             <p className="text-lg text-[var(--text-secondary)] mb-8">
-              Войдите в свой аккаунт, чтобы продолжить обучение по физическому резервированию кластера PostgreSQL.
+              Введите email, указанный при регистрации. Мы отправим ссылку для сброса пароля.
             </p>
 
             <div className="space-y-4">
@@ -90,62 +101,58 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Right side - Login Form */}
+          {/* Right side - Forgot Password Form */}
           <div className="order-1 lg:order-2">
             <Card>
               <CardHeader>
-                <CardTitle>Вход в систему</CardTitle>
+                <CardTitle>Сброс пароля</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleLogin} className="space-y-4">
-                  {error && (
-                    <div className="p-3 rounded-md bg-[var(--accent-red)]/10 border border-[var(--accent-red)]/30 text-[var(--accent-red)] text-sm">
-                      {error}
-                    </div>
-                  )}
-                  <Input
-                    label="Email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                  <Input
-                    label="Пароль"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="w-4 h-4 rounded border-[var(--border-primary)] bg-[var(--bg-primary)] text-[var(--accent-green)] focus:ring-[var(--accent-green)]"
-                      />
-                      <span className="text-sm text-[var(--text-secondary)]">Запомнить меня</span>
-                    </label>
-                    <Link href="/forgot-password" className="text-sm text-[var(--accent-blue)] hover:underline">
-                      Забыли пароль?
+                {success ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="w-16 h-16 text-[var(--accent-green)] mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">
+                      Письмо отправлено
+                    </h3>
+                    <p className="text-sm text-[var(--text-secondary)] mb-6">
+                      Если аккаунт с email <span className="font-medium">{email}</span> существует, 
+                      на него будет отправлено письмо со ссылкой для сброса пароля.
+                    </p>
+                    <Link href="/login">
+                      <Button variant="secondary">Вернуться к входу</Button>
                     </Link>
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Вход..." : "Войти"}
-                  </Button>
-                </form>
+                ) : (
+                  <>
+                    <form onSubmit={handleForgotPassword} className="space-y-4">
+                      {error && (
+                        <div className="p-3 rounded-md bg-[var(--accent-red)]/10 border border-[var(--accent-red)]/30 text-[var(--accent-red)] text-sm">
+                          {error}
+                        </div>
+                      )}
+                      <Input
+                        label="Email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                      <Button type="submit" className="w-full" disabled={loading}>
+                        {loading ? "Отправка..." : "Отправить ссылку"}
+                      </Button>
+                    </form>
 
-                <div className="mt-6 text-center">
-                  <p className="text-sm text-[var(--text-muted)]">
-                    Нет аккаунта?{" "}
-                    <Link href="/register" className="text-[var(--accent-green)] hover:underline">
-                      Зарегистрироваться
-                    </Link>
-                  </p>
-                </div>
+                    <div className="mt-6 text-center">
+                      <p className="text-sm text-[var(--text-muted)]">
+                        Вспомнили пароль?{" "}
+                        <Link href="/login" className="text-[var(--accent-green)] hover:underline">
+                          Войти
+                        </Link>
+                      </p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

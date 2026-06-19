@@ -14,8 +14,8 @@ interface AuthContextType {
   userName: string;
   userEmail: string;
   token: string;
-  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   getAuthHeaders: () => { Authorization?: string };
 }
@@ -59,11 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, rememberMe = false) => {
     const res = await fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "register", name, email, password }),
+      body: JSON.stringify({ action: "register", name, email, password, rememberMe }),
     });
     const data = await res.json();
     if (!res.ok) return { success: false, error: data.error };
@@ -77,11 +77,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe = false) => {
     const res = await fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "login", email, password }),
+      body: JSON.stringify({ action: "login", email, password, rememberMe }),
     });
     const data = await res.json();
     if (!res.ok) return { success: false, error: data.error };
