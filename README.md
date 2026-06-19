@@ -19,11 +19,25 @@ npm run dev
 | `npm run build` | Сборка production |
 | `npm run start` | Запуск production |
 | `npm run pass:reset <email> <пароль>` | Сброс пароля пользователя |
+| `npm run task <command>` | Управление задачами (add, list, done, edit, remove) |
 
 ## Сброс пароля
 
 ```bash
 npm run pass:reset admin@koderstudio.ru mypassword123
+```
+
+## Управление задачами
+
+Задачи хранятся в PostgreSQL (БД `pg_practikum`).
+
+```bash
+npm run task add "Название задачи" --desc "Описание" --priority 1
+npm run task list
+npm run task list --status open
+npm run task done <id>
+npm run task edit <id> --title "Новое название" --status done
+npm run task remove <id>
 ```
 
 ## Стек

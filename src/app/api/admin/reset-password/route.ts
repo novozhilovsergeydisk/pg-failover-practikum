@@ -1,23 +1,5 @@
 import { NextResponse } from "next/server";
-import { readFile, writeFile } from "fs/promises";
-import { join } from "path";
-
-const USERS_FILE = join(process.cwd(), "data", "users.json");
-
-async function getUsers() {
-  try {
-    const data = await readFile(USERS_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-async function saveUsers(users: unknown[]) {
-  const { mkdir } = await import("fs/promises");
-  await mkdir(join(process.cwd(), "data"), { recursive: true });
-  await writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-}
+import pool from "@/lib/db";
 
 export async function POST(request: Request) {
   const { email, newPassword } = await request.json();
@@ -36,18 +18,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const users = await getUsers();
-  const userIndex = users.findIndex((u: { email: string }) => u.email === email);
+  const result = await pool.query(
+    "UPDATE users SET password = $1 WHERE email = $2 RETURNING id",
+    [newPassword, email]
+  );
 
-  if (userIndex === -1) {
+  if (result.rows.length === 0) {
     return NextResponse.json(
       { error: "Пользователь не найден" },
       { status: 404 }
     );
   }
-
-  users[userIndex] = { ...users[userIndex], password: newPassword };
-  await saveUsers(users);
 
   return NextResponse.json({
     success: true,

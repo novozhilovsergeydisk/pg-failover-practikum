@@ -1,30 +1,5 @@
 import { NextResponse } from "next/server";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-
-const DATA_DIR = join(process.cwd(), "data");
-const USERS_FILE = join(DATA_DIR, "users.json");
-
-interface User {
-  name: string;
-  email: string;
-  password: string;
-  role?: string;
-}
-
-async function getUsers(): Promise<User[]> {
-  try {
-    const data = await readFile(USERS_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-async function saveUsers(users: User[]) {
-  await mkdir(DATA_DIR, { recursive: true });
-  await writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-}
+import pool from "@/lib/db";
 
 export async function POST(request: Request) {
   const { action, name, email, password } = await request.json();
@@ -37,13 +12,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Пароль минимум 6 символов" }, { status: 400 });
     }
 
-    const users = await getUsers();
-    if (users.some(u => u.email === email)) {
+    const exists = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+    if (exists.rows.length > 0) {
       return NextResponse.json({ error: "Пользователь уже существует" }, { status: 409 });
     }
 
-    users.push({ name, email, password, role: "user" });
-    await saveUsers(users);
+    await pool.query(
+      "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, 'user')",
+      [name, email, password]
+    );
     return NextResponse.json({ success: true, user: { name, email, role: "user" } });
   }
 
@@ -52,12 +29,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email и пароль обязательны" }, { status: 400 });
     }
 
-    const users = await getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) {
+    const result = await pool.query(
+      "SELECT name, email, role FROM users WHERE email = $1 AND password = $2",
+      [email, password]
+    );
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: "Неверный email или пароль" }, { status: 401 });
     }
 
+    const user = result.rows[0];
     return NextResponse.json({
       success: true,
       user: { name: user.name, email: user.email, role: user.role || "user" },
