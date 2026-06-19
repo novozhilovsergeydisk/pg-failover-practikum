@@ -2,8 +2,12 @@ import nodemailer from "nodemailer";
 
 const smtpConfig: Record<string, unknown> = {
   host: process.env.SMTP_HOST || "mail.appuse.ru",
-  port: parseInt(process.env.SMTP_PORT || "587"),
+  port: parseInt(process.env.SMTP_PORT || "25"),
   secure: false,
+  tls: {
+    rejectUnauthorized: false,
+  },
+  requireTLS: false,
 };
 
 if (process.env.SMTP_USER) {
