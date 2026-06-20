@@ -734,6 +734,330 @@ export const LESSON_CONTENT: LessonContent[] = [
       },
     ],
   },
+  // Module 4
+  {
+    moduleId: 4,
+    lessonId: 1,
+    theory: [
+      "Failover — процесс переключения на резервный сервер при выходе из строя основного.",
+      "RPO (Recovery Point Objective) — максимальная потеря данных в единицу времени.",
+      "RTO (Recovery Time Objective) — время восстановления работы после сбоя.",
+      "Синхронная репликация гарантирует zero RPO, но увеличивает латентность записи.",
+      "Асинхронная репликация быстрее, но возможна потеря данных при failover.",
+    ],
+    practice: [
+      {
+        title: "Проверка состояния кластера",
+        description: "Посмотрите текущее состояние мастер-реплика:",
+        command: "sudo -u postgres psql -c \"SELECT pid, usename, application_name, client_addr, state, sync_state FROM pg_stat_replication;\"",
+        output: "  pid  | usename  | application_name | client_addr | state    | sync_state \n-------+----------+------------------+-------------+----------+------------\n 12345 | replicator | walreceiver    | standby-ip  | streaming | async",
+      },
+      {
+        title: "Проверка расстояния до мастера",
+        description: "Проверьте, как далеко реплика от мастера:",
+        command: "sudo -u postgres psql -c \"SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS replay_lag_bytes FROM pg_stat_replication;\"",
+        output: " replay_lag_bytes \n------------------\n               0",
+      },
+    ],
+    verification: [
+      {
+        description: "Убедитесь, что репликация работает:",
+        command: "sudo -u postgres psql -c \"SELECT state FROM pg_stat_replication;\"",
+        expectedOutput: " state    \n----------\n streaming",
+      },
+    ],
+  },
+  {
+    moduleId: 4,
+    lessonId: 2,
+    theory: [
+      "Автоматический failover обеспечивает максимальную доступность кластера.",
+      "Patroni — популярное решение для автоматического failover PostgreSQL.",
+      "etcd/Consul/ZooKeeper — хранилища для хранения состояния кластера.",
+      "Patroni отслеживает состояние мастера и автоматически повышает реплику при сбое.",
+    ],
+    practice: [
+      {
+        title: "Установка Patroni",
+        description: "Установите Patroni и зависимости:",
+        command: "pip3 install patroni[etcd]",
+        output: "Collecting patroni[etcd]\n...",
+      },
+      {
+        title: "Конфигурация Patroni",
+        description: "Создайте конфигурационный файл patroni.yml:",
+        command: "cat > /etc/patroni/patroni.yml << 'EOF'\nscope: pg-cluster\nnamespace: /db/\nname: node1\n\nrestapi:\n  listen: 0.0.0.0:8008\n  connect_address: 127.0.0.1:8008\n\netcd:\n  hosts: 127.0.0.1:2379\n\nbootstrap:\n  dcs:\n    ttl: 30\n    loop_wait: 10\n    retry_timeout: 10\n    maximum_lag_on_failover: 1048576\n    postgresql:\n      use_pg_rewind: true\n      parameters:\n        wal_level: replica\n        hot_standby: on\n        max_wal_senders: 10\n        max_replication_slots: 10\nEOF",
+        output: "",
+      },
+      {
+        title: "Запуск Patroni",
+        description: "Запустите Patroni:",
+        command: "sudo systemctl start patroni",
+        output: "",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте статус Patroni:",
+        command: "patronictl -c /etc/patroni/patroni.yml list",
+        expectedOutput: "  Cluster: pg-cluster\n  +---------+---------+---------+---------+-----------+\n  | Member  | Host    | Role    | State   | Lag       |\n  +---------+---------+---------+---------+-----------+\n  | node1   | 127.0.0 | Leader  | running | 0MB       |\n  +---------+---------+---------+---------+-----------+",
+      },
+    ],
+  },
+  {
+    moduleId: 4,
+    lessonId: 3,
+    theory: [
+      "Ручной failover выполняется администратором при Planned downtime или для тестирования.",
+      "pg_promote() — функция для повышения реплики в мастер.",
+      "Перед ручным failover убедитесь, что реплика синхронизирована с мастером.",
+      "После failover нужно перенастроить приложения на новый мастер.",
+    ],
+    practice: [
+      {
+        title: "Проверка синхронизации",
+        description: "Убедитесь, что реплика актуальна:",
+        command: "sudo -u postgres psql -h standby-ip -c \"SELECT pg_last_wal_replay_lsn(), pg_last_wal_receive_lsn();\"",
+        output: " pg_last_wal_replay_lsn | pg_last_wal_receive_lsn \n------------------------+-------------------------\n 0/1000000              | 0/1000000",
+      },
+      {
+        title: "Остановка мастера",
+        description: "Имитируйте отказ мастера:",
+        command: "sudo systemctl stop postgresql",
+        output: "",
+      },
+      {
+        title: "Повышение реплики",
+        description: "На реплике выполните повышение:",
+        command: "sudo -u postgres psql -c \"SELECT pg_promote();\"",
+        output: " pg_promote \n------------\n t",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что реплика стала мастером:",
+        command: "sudo -u postgres psql -c \"SELECT pg_is_in_recovery();\"",
+        expectedOutput: " pg_is_in_recovery \n--------------------\n f",
+      },
+    ],
+  },
+  {
+    moduleId: 4,
+    lessonId: 4,
+    theory: [
+      "После повышения реплики необходимо перенастроить приложения на новый мастер.",
+      "Обновите DNS-записи или файл конфигурации приложения.",
+      "Убедитесь, что все реплики подключаются к новому мастеру.",
+      "Настройте бывшего мастера как реплику нового.",
+    ],
+    practice: [
+      {
+        title: "Проверка нового мастера",
+        description: "Убедитесь, что новый мастер работает:",
+        command: "sudo -u postgres psql -c \"SELECT pg_is_in_recovery(), pg_current_wal_lsn();\"",
+        output: " pg_is_in_recovery | pg_current_wal_lsn \n--------------------+--------------------\n f                  | 0/1000000",
+      },
+      {
+        title: "Создание тестовых данных",
+        description: "Создайте тестовую таблицу на новом мастере:",
+        command: "sudo -u postgres psql -c \"CREATE TABLE test_failover (id serial, data text); INSERT INTO test_failover (data) VALUES ('new_master');\"",
+        output: "CREATE TABLE\nINSERT 0 1",
+      },
+      {
+        title: "Настройка старого мастера как реплики",
+        description: "На старом мастере создайте standby.signal:",
+        command: "sudo -u postgres touch /var/lib/postgresql/16/main/standby.signal",
+        output: "",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что старый мастер стал репликой:",
+        command: "sudo -u postgres psql -c \"SELECT pg_is_in_recovery();\"",
+        expectedOutput: " pg_is_in_recovery \n--------------------\n t",
+      },
+    ],
+  },
+  {
+    moduleId: 4,
+    lessonId: 5,
+    theory: [
+      "pg_rewind — утилита для быстрого восстановления старого мастера как реплики.",
+      "Позволяет избежать полного пересоздания резервной копии.",
+      "Работает на основе сравнения WAL-файлов между серверами.",
+      "Ограничение:pg_rewind не работает, если старый мастер принял записи после failover.",
+    ],
+    practice: [
+      {
+        title: "Подготовка к pg_rewind",
+        description: "На старом мастере включите логирование:",
+        command: "echo \"wal_log_hints = on\" | sudo tee -a /etc/postgresql/16/main/postgresql.conf",
+        output: "wal_log_hints = on",
+      },
+      {
+        title: "Остановка старого мастера",
+        description: "Остановите PostgreSQL на старом мастере:",
+        command: "sudo systemctl stop postgresql",
+        output: "",
+      },
+      {
+        title: "Запуск pg_rewind",
+        description: "Выполните pg_rewind из новой мастера:",
+        command: "sudo -u postgres pg_rewind --target-pgdata=/var/lib/postgresql/16/main --source-server=\"host=new-master-ip user=postgres dbname=postgres\" --progress",
+        output: "connected, sending timeline history file\nrewinding from 1 to 2\n...rewinding done!",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что pg_rewind завершился успешно:",
+        command: "ls /var/lib/postgresql/16/main/standby.signal",
+        expectedOutput: "/var/lib/postgresql/16/main/standby.signal",
+      },
+    ],
+  },
+  {
+    moduleId: 4,
+    lessonId: 6,
+    theory: [
+      "Возврат старого мастера — процесс восстановления бывшего мастера как реплики нового.",
+      "После pg_rewind нужно создать standby.signal и настроить подключение к новому мастеру.",
+      "Убедитесь, что конфигурация указывает на нового мастера.",
+      "После запуска проверьте синхронизацию данных.",
+    ],
+    practice: [
+      {
+        title: "Настройка подключения к новому мастеру",
+        description: "Обновите primary_conninfo в postgresql.conf:",
+        command: "echo \"primary_conninfo = 'host=new-master-ip port=5432 user=replicator password=replicator_password'\" | sudo tee /etc/postgresql/16/main/postgresql.auto.conf",
+        output: "",
+      },
+      {
+        title: "Создание standby.signal",
+        description: "Создайте файл standby.signal:",
+        command: "sudo -u postgres touch /var/lib/postgresql/16/main/standby.signal",
+        output: "",
+      },
+      {
+        title: "Запуск PostgreSQL",
+        description: "Запустите PostgreSQL на старом мастере:",
+        command: "sudo systemctl start postgresql",
+        output: "",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что старый мастер работает как реплика:",
+        command: "sudo -u postgres psql -c \"SELECT pg_is_in_recovery(), pg_last_wal_receive_lsn();\"",
+        expectedOutput: " pg_is_in_recovery | pg_last_wal_receive_lsn \n--------------------+-------------------------\n t                  | 0/1000000",
+      },
+    ],
+  },
+  {
+    moduleId: 4,
+    lessonId: 7,
+    theory: [
+      "Полная ресинхронизация — процесс полного копирования данных с мастера на реплику.",
+      "Инкрементальная ресинхронизация — применение пропущенных WAL-файлов.",
+      "Ресинхронизация может занять много времени при большом расхождении данных.",
+      "Для ускорения используйте rsync или pg_basebackup с параллельным копированием.",
+    ],
+    practice: [
+      {
+        title: "Проверка расхождения",
+        description: "Определите размер расхождения данных:",
+        command: "sudo -u postgres psql -h standby-ip -c \"SELECT pg_wal_lsn_diff(pg_last_wal_receive_lsn(), (SELECT pg_last_wal_replay_lsn() FROM pg_stat_wal_receiver));\"",
+        output: " pg_wal_lsn_diff \n-----------------\n               0",
+      },
+      {
+        title: "Полная ресинхронизация",
+        description: "Если расхождение слишком велико, выполните полное копирование:",
+        command: "sudo systemctl stop postgresql && sudo -u postgres rm -rf /var/lib/postgresql/16/main/* && sudo -u postgres pg_basebackup -h new-master-ip -D /var/lib/postgresql/16/main -U replicator -Fp -Xs -P -R",
+        output: "24887/24887 kB (100%), 1/1 tablespace\nTransaction log and system record written to disk.\nBackup complete",
+      },
+    ],
+    verification: [
+      {
+        description: "После ресинхронизации проверьте работу:",
+        command: "sudo systemctl start postgresql && sudo -u postgres psql -c \"SELECT pg_is_in_recovery();\"",
+        expectedOutput: " pg_is_in_recovery \n--------------------\n t",
+      },
+    ],
+  },
+  {
+    moduleId: 4,
+    lessonId: 8,
+    theory: [
+      "Регулярное тестирование failover критически важено для уверенности в отказоустойчивости.",
+      "Chaos engineering — подход к тестированию путём намеренного создания сбоев.",
+      "Тестируйте как плановый, так и внеплановый failover.",
+      "Документируйте результаты тестов и улучшайте процедуры.",
+    ],
+    practice: [
+      {
+        title: "План тестирования",
+        description: "Создайте план тестирования failover:",
+        command: "cat > /usr/local/bin/test_failover.sh << 'EOF'\n#!/bin/bash\necho \"=== Тест failover ===\"\necho \"1. Проверка состояния кластера\"\npatronictl list\necho \"2. Остановка мастера\"\nsudo systemctl stop postgresql\necho \"3. Ожидание failover\"\nsleep 10\necho \"4. Проверка нового мастера\"\npatronictl list\necho \"5. Запуск старого мастера\"\nsudo systemctl start postgresql\necho \"6. Проверка синхронизации\"\nsleep 5\npatronictl list\necho \"=== Тест завершён ===\"\nEOF\nchmod +x /usr/local/bin/test_failover.sh",
+        output: "",
+      },
+      {
+        title: "Запуск теста",
+        description: "Запустите тест failover:",
+        command: "sudo /usr/local/bin/test_failover.sh",
+        output: "=== Тест failover ===\n1. Проверка состояния кластера\n  Cluster: pg-cluster\n...",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что кластер восстановился:",
+        command: "patronictl list",
+        expectedOutput: "  Cluster: pg-cluster\n  +---------+---------+---------+---------+-----------+\n  | Member  | Host    | Role    | State   | Lag       |\n  +---------+---------+---------+---------+-----------+\n  | node1   | 127.0.0 | Leader  | running | 0MB       |\n  | node2   | 127.0.0 | Replica | running | 0MB       |\n  +---------+---------+---------+---------+-----------+",
+      },
+    ],
+  },
+  {
+    moduleId: 4,
+    lessonId: 9,
+    theory: [
+      "В этом задании вы выполните полный цикл failover и восстановления.",
+      "Настройте автоматический failover с помощью Patroni.",
+      "Протестируйте сценарий отказа мастера.",
+      "Восстановите бывшего мастера как реплику.",
+      "Документируйте все действия для административной команды.",
+    ],
+    practice: [
+      {
+        title: "Настройка кластера",
+        description: "Убедитесь, что кластер настроен и работает:",
+        command: "patronictl list",
+        output: "  Cluster: pg-cluster\n  +---------+---------+---------+---------+-----------+\n  | Member  | Host    | Role    | State   | Lag       |\n  +---------+---------+---------+---------+-----------+\n  | node1   | 127.0.0 | Leader  | running | 0MB       |\n  +---------+---------+---------+---------+-----------+",
+      },
+      {
+        title: "Имитация сбоя",
+        description: "Остановите мастер для имитации сбоя:",
+        command: "sudo systemctl stop postgresql",
+        output: "",
+      },
+      {
+        title: "Проверка failover",
+        description: "Дождитесь автоматического failover:",
+        command: "sleep 15 && patronictl list",
+        output: "  Cluster: pg-cluster\n  +---------+---------+---------+---------+-----------+\n  | Member  | Host    | Role    | State   | Lag       |\n  +---------+---------+---------+---------+-----------+\n  | node2   | 127.0.0 | Leader  | running | 0MB       |\n  +---------+---------+---------+---------+-----------+",
+      },
+      {
+        title: "Восстановление",
+        description: "Восстановите старого мастера как реплику:",
+        command: "sudo systemctl start postgresql",
+        output: "",
+      },
+    ],
+    verification: [
+      {
+        description: "Финальная проверка: кластер полностью восстановлен:",
+        command: "patronictl list",
+        expectedOutput: "  Cluster: pg-cluster\n  +---------+---------+---------+---------+-----------+\n  | Member  | Host    | Role    | State   | Lag       |\n  +---------+---------+---------+---------+-----------+\n  | node1   | 127.0.0 | Replica | running | 0MB       |\n  | node2   | 127.0.0 | Leader  | running | 0MB       |\n  +---------+---------+---------+---------+-----------+",
+      },
+    ],
+  },
 ];
 
 export function getLessonContent(moduleId: number, lessonId: number): LessonContent | undefined {
