@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     }
 
     const result = await pool.query(
-      "SELECT name, email, password, role, email_verified FROM users WHERE email = $1",
+      "SELECT name, email, password, role FROM users WHERE email = $1",
       [email]
     );
     if (result.rows.length === 0) {
@@ -59,13 +59,14 @@ export async function POST(request: Request) {
     }
 
     const user = result.rows[0];
+
+    if (!user.password) {
+      return NextResponse.json({ error: "Этот аккаунт создан через GitHub. Войдите через GitHub." }, { status: 401 });
+    }
+
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return NextResponse.json({ error: "Неверный email или пароль" }, { status: 401 });
-    }
-
-    if (!user.email_verified) {
-      return NextResponse.json({ error: "Email не подтверждён. Проверьте почту." }, { status: 403 });
     }
 
     const token = signToken({ name: user.name, email: user.email, role: user.role || "user" }, rememberMe);

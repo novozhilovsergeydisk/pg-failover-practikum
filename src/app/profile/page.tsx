@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Header, NavLink, useAuth } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { useRouter } from "next/navigation";
@@ -7,30 +8,73 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { User, BookOpen, Clock, Award, Settings, LogOut } from "lucide-react";
 
+const MODULES = [
+  { id: 1, title: "Основы потоковой репликации", lessonsCount: 8 },
+  { id: 2, title: "Физические слоты репликации", lessonsCount: 6 },
+  { id: 3, title: "TLS и безопасность", lessonsCount: 7 },
+  { id: 4, title: "Failover и pg_rewind", lessonsCount: 9 },
+];
+
+const TOTAL_LESSONS = MODULES.reduce((acc, m) => acc + m.lessonsCount, 0);
+
+interface ProgressData {
+  [moduleId: number]: {
+    total: number;
+    completed: number;
+    lessons: { [lessonId: number]: boolean };
+  };
+}
+
 export default function ProfilePage() {
-  const { userName, userEmail, logout } = useAuth();
+  const { userName, userEmail, userAvatar, token, logout } = useAuth();
   const router = useRouter();
+  const [progress, setProgress] = useState<ProgressData>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    fetch("/api/progress", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setProgress(data.progress || {});
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [token]);
+
+  const totalCompleted = Object.values(progress).reduce(
+    (acc, m) => acc + (m.completed || 0),
+    0
+  );
+
+  const completedModules = MODULES.filter((module) => {
+    const moduleProgress = progress[module.id];
+    return moduleProgress && moduleProgress.completed >= module.lessonsCount;
+  }).length;
+
+  const stats = [
+    { label: "Модулей завершено", value: `${completedModules} из ${MODULES.length}`, icon: <BookOpen className="w-5 h-5" /> },
+    { label: "Уроков пройдено", value: `${totalCompleted} из ${TOTAL_LESSONS}`, icon: <Award className="w-5 h-5" /> },
+    { label: "Прогресс", value: `${TOTAL_LESSONS > 0 ? Math.round((totalCompleted / TOTAL_LESSONS) * 100) : 0}%`, icon: <Clock className="w-5 h-5" /> },
+    { label: "Текущий streak", value: "0 дней", icon: <Award className="w-5 h-5" /> },
+  ];
 
   const user = {
     name: userName || "Пользователь",
     email: userEmail || "user@example.com",
+    avatar: userAvatar,
     role: "Студент",
-    joinDate: "15 января 2024",
     lastActive: "Сейчас",
   };
-
-  const stats = [
-    { label: "Модулей завершено", value: "0 из 4", icon: <BookOpen className="w-5 h-5" /> },
-    { label: "Уроков пройдено", value: "0 из 30", icon: <Award className="w-5 h-5" /> },
-    { label: "Время обучения", value: "0 часов", icon: <Clock className="w-5 h-5" /> },
-    { label: "Текущий streak", value: "0 дней", icon: <Award className="w-5 h-5" /> },
-  ];
-
-  const recentActivity: { module: string; lesson: string; date: string; status: string }[] = [];
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -45,9 +89,17 @@ export default function ProfilePage() {
         {/* Profile Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-full bg-[var(--accent-green)] flex items-center justify-center">
-              <User className="w-8 h-8 text-white" />
-            </div>
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="w-16 h-16 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-[var(--accent-green)] flex items-center justify-center">
+                <User className="w-8 h-8 text-white" />
+              </div>
+            )}
             <div>
               <h1 className="text-2xl font-bold text-[var(--text-primary)]">
                 {user.name}
@@ -87,79 +139,75 @@ export default function ProfilePage() {
               <CardTitle>Прогресс по модулям</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-[var(--text-primary)]">Основы потоковой репликации</span>
-                    <span className="text-sm text-[var(--text-muted)]">0%</span>
-                  </div>
-                  <Progress value={0} />
+              {loading ? (
+                <p className="text-sm text-[var(--text-muted)] text-center py-4">Загрузка...</p>
+              ) : (
+                <div className="space-y-4">
+                  {MODULES.map((module) => {
+                    const moduleProgress = progress[module.id];
+                    const completed = moduleProgress?.completed || 0;
+                    const percent = module.lessonsCount > 0 ? Math.round((completed / module.lessonsCount) * 100) : 0;
+
+                    return (
+                      <div key={module.id}>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm text-[var(--text-primary)]">{module.title}</span>
+                          <span className="text-sm text-[var(--text-muted)]">{percent}%</span>
+                        </div>
+                        <Progress value={completed} max={module.lessonsCount} />
+                        <p className="text-xs text-[var(--text-muted)] mt-1">
+                          {completed} из {module.lessonsCount} уроков
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-[var(--text-primary)]">Физические слоты репликации</span>
-                    <span className="text-sm text-[var(--text-muted)]">0%</span>
-                  </div>
-                  <Progress value={0} />
-                </div>
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-[var(--text-primary)]">TLS и безопасность</span>
-                    <span className="text-sm text-[var(--text-muted)]">0%</span>
-                  </div>
-                  <Progress value={0} />
-                </div>
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-[var(--text-primary)]">Failover и pg_rewind</span>
-                    <span className="text-sm text-[var(--text-muted)]">0%</span>
-                  </div>
-                  <Progress value={0} />
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Recent Activity */}
+          {/* Overall Progress */}
           <Card>
             <CardHeader>
-              <CardTitle>Последняя активность</CardTitle>
+              <CardTitle>Общий прогресс</CardTitle>
             </CardHeader>
             <CardContent>
-              {recentActivity.length === 0 ? (
-                <p className="text-sm text-[var(--text-muted)] text-center py-4">Пока нет активности</p>
-              ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Модуль</TableHead>
-                    <TableHead>Урок</TableHead>
-                    <TableHead>Статус</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentActivity.map((activity, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <span className="text-sm text-[var(--text-primary)]">{activity.module}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-[var(--text-secondary)]">{activity.lesson}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          activity.status === "completed" ? "green" :
-                          activity.status === "in-progress" ? "orange" : "blue"
-                        }>
-                          {activity.status === "completed" ? "Завершено" :
-                           activity.status === "in-progress" ? "В процессе" : "Доступно"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              )}
+              <div className="flex flex-col items-center py-6">
+                <div className="relative w-32 h-32 mb-4">
+                  <svg className="w-32 h-32 transform -rotate-90">
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      stroke="var(--border-primary)"
+                      strokeWidth="8"
+                      fill="none"
+                    />
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      stroke="var(--accent-green)"
+                      strokeWidth="8"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 56}`}
+                      strokeDashoffset={`${2 * Math.PI * 56 * (1 - totalCompleted / TOTAL_LESSONS)}`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-[var(--text-primary)]">
+                      {TOTAL_LESSONS > 0 ? Math.round((totalCompleted / TOTAL_LESSONS) * 100) : 0}%
+                    </span>
+                  </div>
+                </div>
+                <p className="text-lg font-medium text-[var(--text-primary)]">
+                  {totalCompleted} из {TOTAL_LESSONS} уроков
+                </p>
+                <p className="text-sm text-[var(--text-muted)]">
+                  {completedModules} из {MODULES.length} модулей завершено
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -189,24 +237,6 @@ export default function ProfilePage() {
           </Card>
         </section>
       </main>
-
-      {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--bg-secondary)] border-t border-[var(--border-primary)] z-50">
-        <div className="flex justify-around py-2">
-          <a href="/" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <BookOpen className="w-5 h-5" />
-            <span className="text-xs">Практикум</span>
-          </a>
-          <a href="/modules" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <BookOpen className="w-5 h-5" />
-            <span className="text-xs">Модули</span>
-          </a>
-          <a href="/reference" className="flex flex-col items-center gap-1 px-3 py-2 text-[var(--text-muted)]">
-            <User className="w-5 h-5" />
-            <span className="text-xs">Профиль</span>
-          </a>
-        </div>
-      </div>
 
       <Footer />
     </div>

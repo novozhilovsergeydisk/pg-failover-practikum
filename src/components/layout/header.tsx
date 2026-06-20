@@ -13,6 +13,7 @@ interface AuthContextType {
   isAdmin: boolean;
   userName: string;
   userEmail: string;
+  userAvatar: string;
   token: string;
   register: (name: string, email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   userName: "",
   userEmail: "",
+  userAvatar: "",
   token: "",
   register: async () => ({ success: false }),
   login: async () => ({ success: false }),
@@ -41,18 +43,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userAvatar, setUserAvatar] = useState("");
   const [token, setToken] = useState("");
 
   useEffect(() => {
+    // Check for GitHub OAuth callback
+    const params = new URLSearchParams(window.location.search);
+    const githubToken = params.get("github_token");
+    const githubUser = params.get("github_user");
+
+    if (githubToken && githubUser) {
+      try {
+        const user = JSON.parse(githubUser);
+        localStorage.setItem("auth", JSON.stringify({ ...user, token: githubToken }));
+        setIsLoggedIn(true);
+        setUserName(user.name || "Пользователь");
+        setUserEmail(user.email || "");
+        setUserAvatar(user.avatar || "");
+        setIsAdmin(user.role === "admin");
+        setToken(githubToken);
+        window.history.replaceState({}, "", window.location.pathname);
+        return;
+      } catch (e) {
+        console.error("Failed to parse GitHub user data:", e);
+      }
+    }
+
     const saved = localStorage.getItem("auth");
     if (saved) {
       const data = JSON.parse(saved);
       setIsLoggedIn(true);
       setUserName(data.name || "Пользователь");
       setUserEmail(data.email || "");
+      setUserAvatar(data.avatar || "");
       setIsAdmin(data.role === "admin");
       setToken(data.token || "");
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
   }, []);
 
   const getAuthHeaders = () => {
@@ -100,12 +127,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setUserName("");
     setUserEmail("");
+    setUserAvatar("");
     setToken("");
     localStorage.removeItem("auth");
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isAdmin, userName, userEmail, token, register, login, logout, getAuthHeaders }}>
+    <AuthContext.Provider value={{ isLoggedIn, isAdmin, userName, userEmail, userAvatar, token, register, login, logout, getAuthHeaders }}>
       {children}
     </AuthContext.Provider>
   );
