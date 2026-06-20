@@ -486,6 +486,254 @@ export const LESSON_CONTENT: LessonContent[] = [
       },
     ],
   },
+  // Module 3
+  {
+    moduleId: 3,
+    lessonId: 1,
+    theory: [
+      "TLS (Transport Layer Security) — протокол шифрования данных при передаче по сети.",
+      "PostgreSQL поддерживает SSL/TLS для шифрования соединений между клиентом и сервером, а также между мастером и репликой.",
+      "Без шифрования данные передаются открытым текстом и могут быть перехвачены.",
+      "Сертификат TLS подтверждает подлинность сервера и шифрует трафик.",
+    ],
+    practice: [
+      {
+        title: "Проверка поддержки SSL",
+        description: "Убедитесь, что PostgreSQL собран с поддержкой SSL:",
+        command: "sudo -u postgres psql -c \"SHOW ssl;\"",
+        output: " ssl \n-----\n on",
+      },
+      {
+        title: "Проверка версии OpenSSL",
+        description: "Проверьте версию OpenSSL:",
+        command: "openssl version",
+        output: "OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)",
+      },
+    ],
+    verification: [
+      {
+        description: "Убедитесь, что SSL включён:",
+        command: "sudo -u postgres psql -c \"SHOW ssl;\"",
+        expectedOutput: " ssl \n-----\n on",
+      },
+    ],
+  },
+  {
+    moduleId: 3,
+    lessonId: 2,
+    theory: [
+      "Для настройки TLS необходимы три типа сертификатов: CA (Certificate Authority), серверный и клиентский.",
+      "CA-сертификат — корневой сертификат, którym подписываются все остальные.",
+      "Сертификат сервера подтверждает подлинность PostgreSQL-сервера.",
+      "Клиентский сертификат используется для аутентификации клиентов (опционально).",
+    ],
+    practice: [
+      {
+        title: "Создание директории для сертификатов",
+        description: "Создайте директорию для хранения сертификатов:",
+        command: "sudo mkdir -p /etc/postgresql/ssl && sudo chown postgres:postgres /etc/postgresql/ssl",
+        output: "",
+      },
+      {
+        title: "Генерация CA-сертификата",
+        description: "Создайте корневой сертификат Certificate Authority:",
+        command: "cd /etc/postgresql/ssl && sudo -u postgres openssl genrsa -out ca.key 2048 && sudo -u postgres openssl req -new -x509 -days 3650 -key ca.key -out ca.crt -subj \"/CN=PostgreSQL CA\"",
+        output: "Generating RSA private key, 2048 bit long modulus\n...+\n...+\n......+++++\n.....+++++",
+      },
+      {
+        title: "Генерация серверного сертификата",
+        description: "Создайте сертификат для PostgreSQL-сервера:",
+        command: "cd /etc/postgresql/ssl && sudo -u postgres openssl genrsa -out server.key 2048 && sudo -u postgres openssl req -new -key server.key -out server.csr -subj \"/CN=postgres\" && sudo -u postgres openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 3650",
+        output: "Signature ok\nsubject=CN = postgres\nGetting CA Private Key",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте созданные файлы:",
+        command: "ls -la /etc/postgresql/ssl/",
+        expectedOutput: "total 20\ndrwxr-xr-x 2 postgres postgres 4096 ...\n-rw-r--r-- 1 postgres postgres 1220 ... ca.crt\n-rw-r--r-- 1 postgres postgres 1679 ... ca.key\n-rw-r--r-- 1 postgres postgres 1119 ... server.crt\n-rw-r--r-- 1 postgres postgres 1679 ... server.key",
+      },
+    ],
+  },
+  {
+    moduleId: 3,
+    lessonId: 3,
+    theory: [
+      "PostgreSQL настраивается для SSL через параметры ssl_cert_file, ssl_key_file и ssl_ca_file в postgresql.conf.",
+      "ssl_cert_file — путь к серверному сертификату.",
+      "ssl_key_file — путь к приватному ключу сервера.",
+      "ssl_ca_file — путь к CA-сертификату для проверки клиентских сертификатов.",
+    ],
+    practice: [
+      {
+        title: "Настройка SSL в postgresql.conf",
+        description: "Добавьте параметры SSL в конфигурацию:",
+        command: "cat >> /etc/postgresql/16/main/postgresql.conf << 'EOF'\n# SSL Configuration\nssl = on\nssl_cert_file = '/etc/postgresql/ssl/server.crt'\nssl_key_file = '/etc/postgresql/ssl/server.key'\nssl_ca_file = '/etc/postgresql/ssl/ca.crt'\nEOF",
+        output: "",
+      },
+      {
+        title: "Настройка прав доступа",
+        description: "Установите правильные права на файлы сертификатов:",
+        command: "sudo chown postgres:postgres /etc/postgresql/ssl/server.* /etc/postgresql/ssl/ca.* && sudo chmod 600 /etc/postgresql/ssl/server.key",
+        output: "",
+      },
+      {
+        title: "Перезапуск PostgreSQL",
+        description: "Перезапустите PostgreSQL для применения настроек:",
+        command: "sudo systemctl restart postgresql",
+        output: "",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что SSL работает:",
+        command: "sudo -u postgres psql -c \"SHOW ssl;\"",
+        expectedOutput: " ssl \n-----\n on",
+      },
+    ],
+  },
+  {
+    moduleId: 3,
+    lessonId: 4,
+    theory: [
+      "pg_hba.conf — файл конфигурации аутентификации PostgreSQL (Host-Based Authentication).",
+      "Определяет, какие пользователи могут подключаться с каких хостов и каким методом.",
+      "Формат записи: TYPE DATABASE USER ADDRESS METHOD",
+      "Порядок записей важен — PostgreSQL проверяет сверху вниз и использует первое совпадение.",
+    ],
+    practice: [
+      {
+        title: "Просмотр текущего pg_hba.conf",
+        description: "Посмотрите текущие настройки аутентификации:",
+        command: "sudo cat /etc/postgresql/16/main/pg_hba.conf | grep -v '^#' | grep -v '^$'",
+        output: "local   all             postgres                                peer\nlocal   all             all                                     peer\nhost    all             all             127.0.0.1/32            scram-sha-256\nhost    all             all             ::1/128                 scram-sha-256",
+      },
+      {
+        title: "Настройка аутентификации для репликации",
+        description: "Добавьте запись для подключения реплики:",
+        command: "echo 'host    replication     replicator      standby-ip/32   scram-sha-256' | sudo tee -a /etc/postgresql/16/main/pg_hba.conf",
+        output: "host    replication     replicator      standby-ip/32   scram-sha-256",
+      },
+      {
+        title: "Настройка шифрованного подключения",
+        description: "Добавьте запись для SSL-подключений:",
+        command: "echo 'hostssl all             all             0.0.0.0/0       scram-sha-256' | sudo tee -a /etc/postgresql/16/main/pg_hba.conf",
+        output: "hostssl all             all             0.0.0.0/0       scram-sha-256",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что записи добавлены:",
+        command: "sudo grep -E 'host|hostssl' /etc/postgresql/16/main/pg_hba.conf | grep -v '^#'",
+        expectedOutput: "host    all             all             127.0.0.1/32            scram-sha-256\nhost    all             all             ::1/128                 scram-sha-256\nhost    replication     replicator      standby-ip/32   scram-sha-256\nhostssl all             all             0.0.0.0/0       scram-sha-256",
+      },
+    ],
+  },
+  {
+    moduleId: 3,
+    lessonId: 5,
+    theory: [
+      "PostgreSQL поддерживает несколько методов аутентификации: trust, reject, md5, scram-sha-256, certificate, ldap, radius.",
+      "scram-sha-256 — рекомендуемый метод, более безопасный чем md5.",
+      "certificate — аутентификация по SSL-сертификату клиента.",
+      "trust — разрешить подключение без пароля (только для разработки!).",
+    ],
+    practice: [
+      {
+        title: "Настройка scram-sha-256",
+        description: "Убедитесь, что используется scram-sha-256:",
+        command: "sudo grep scram-sha-256 /etc/postgresql/16/main/pg_hba.conf",
+        output: "host    all             all             127.0.0.1/32            scram-sha-256\nhost    all             all             ::1/128                 scram-sha-256",
+      },
+      {
+        title: "Настройка аутентификации по сертификату",
+        description: "Добавьте запись для клиентской сертификатной аутентификации:",
+        command: "echo 'hostssl all             all             0.0.0.0/0       cert' | sudo tee -a /etc/postgresql/16/main/pg_hba.conf",
+        output: "hostssl all             all             0.0.0.0/0       cert",
+      },
+      {
+        title: "Создание пользователя с паролем",
+        description: "Создайте пользователя с безопасным паролем:",
+        command: "sudo -u postgres psql -c \"CREATE USER app_user WITH PASSWORD 'StrongP@ssw0rd';\"",
+        output: "CREATE ROLE",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что пользователь создан:",
+        command: "sudo -u postgres psql -c \"SELECT usename FROM pg_user WHERE usename = 'app_user';\"",
+        expectedOutput: " usename  \n----------\n app_user",
+      },
+    ],
+  },
+  {
+    moduleId: 3,
+    lessonId: 6,
+    theory: [
+      "Регулярный аудит безопасности критически важен для защиты данных.",
+      "Проверяйте настройки pg_hba.conf, SSL-сертификаты и права доступа.",
+      "Используйте логирование для отслеживания попыток подключения.",
+      "Тестируйте подключения с различных хостов и с разными учётными данными.",
+    ],
+    practice: [
+      {
+        title: "Аудит настроек SSL",
+        description: "Проверьте параметры SSL:",
+        command: "sudo -u postgres psql -c \"SELECT name, setting FROM pg_settings WHERE name LIKE '%ssl%';\"",
+        output: "        name        |        setting        \n--------------------+-----------------------\n ssl                 | on\n ssl_ca_file         | /etc/postgresql/ssl/ca.crt\n ssl_cert_file       | /etc/postgresql/ssl/server.crt\n ssl_key_file        | /etc/postgresql/ssl/server.key",
+      },
+      {
+        title: "Проверка подключения через SSL",
+        description: "Протестируйте SSL-подключение:",
+        command: "psql \"host=127.0.0.1 dbname=postgres user=postgres sslmode=require\" -c \"SELECT ssl_is_used();\"",
+        output: " ssl_is_used \n-------------\n t",
+      },
+      {
+        title: "Просмотр логов",
+        description: "Проверьте логи на наличие ошибок аутентификации:",
+        command: "sudo grep 'connection authorized' /var/log/postgresql/postgresql-16-main.log | tail -5",
+        output: "",
+      },
+    ],
+    verification: [
+      {
+        description: "Убедитесь, что SSL-подключение работает:",
+        command: "psql \"host=127.0.0.1 dbname=postgres user=postgres sslmode=require\" -c \"SELECT ssl_is_used();\"",
+        expectedOutput: " ssl_is_used \n-------------\n t",
+      },
+    ],
+  },
+  {
+    moduleId: 3,
+    lessonId: 7,
+    theory: [
+      "В этом задании вы настроите полную безопасность кластера PostgreSQL.",
+      "Включите SSL для всех соединений.",
+      "Настройте аутентификацию по сертификатам для репликации.",
+      "Проведите аудит безопасности и задокументируйте настройки.",
+    ],
+    practice: [
+      {
+        title: "Генерация сертификатов для кластера",
+        description: "Создайте полный набор сертификатов:",
+        command: "cd /etc/postgresql/ssl && sudo -u postgres bash -c '\nopenssl genrsa -out ca.key 2048\nopenssl req -new -x509 -days 3650 -key ca.key -out ca.crt -subj \"/CN=Cluster CA\"\nopenssl genrsa -out server.key 2048\nopenssl req -new -key server.key -out server.csr -subj \"/CN=master\"\nopenssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 3650\n'",
+        output: "Generating RSA private key, 2048 bit long modulus\n...",
+      },
+      {
+        title: "Настройка pg_hba.conf",
+        description: "Настройте аутентификацию для всех сценариев:",
+        command: "sudo tee /etc/postgresql/16/main/pg_hba.conf << 'EOF'\n# TYPE  DATABASE  USER        ADDRESS         METHOD\nlocal   all       postgres                    peer\nlocal   all       all                         peer\nhostssl all       all         0.0.0.0/0       scram-sha-256\nhostssl all       all         ::1/128         scram-sha-256\nhostssl replication replicator 0.0.0.0/0      cert\nEOF",
+        output: "",
+      },
+    ],
+    verification: [
+      {
+        description: "Финальная проверка: протестируйте SSL-подключение:",
+        command: "psql \"host=127.0.0.1 dbname=postgres user=postgres sslmode=verify-ca sslrootcert=/etc/postgresql/ssl/ca.crt\" -c \"SELECT ssl_is_used(), current_user;\"",
+        expectedOutput: " ssl_is_used | current_user \n-------------+--------------\n t           | postgres",
+      },
+    ],
+  },
 ];
 
 export function getLessonContent(moduleId: number, lessonId: number): LessonContent | undefined {
