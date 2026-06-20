@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header, NavLink, useAuth } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { useRouter } from "next/navigation";
@@ -219,7 +219,7 @@ export default function ProfilePage() {
               <CardTitle>Настройки профиля</CardTitle>
             </CardHeader>
             <CardContent>
-              <ProfileEdit token={token || ""} currentName={userName} />
+              <ProfileEdit token={token || ""} currentName={userName} currentAvatar={userAvatar} />
             </CardContent>
           </Card>
         </section>
@@ -238,15 +238,57 @@ export default function ProfilePage() {
   );
 }
 
-function ProfileEdit({ token, currentName }: { token: string; currentName: string }) {
+function ProfileEdit({ token, currentName, currentAvatar }: { token: string; currentName: string; currentAvatar?: string }) {
   const [name, setName] = useState(currentName);
+  const [avatar, setAvatar] = useState(currentAvatar || "");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setName(currentName);
-  }, [currentName]);
+    setAvatar(currentAvatar || "");
+  }, [currentName, currentAvatar]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setMessage("");
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setAvatar(data.avatarUrl);
+        setMessage("Аватар обновлён");
+        setIsError(false);
+        localStorage.setItem("auth", JSON.stringify({
+          ...JSON.parse(localStorage.getItem("auth") || "{}"),
+          avatar: data.avatarUrl,
+        }));
+      } else {
+        setMessage(data.error || "Ошибка загрузки");
+        setIsError(true);
+      }
+    } catch {
+      setMessage("Ошибка сети");
+      setIsError(true);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim() || saving) return;
@@ -285,7 +327,43 @@ function ProfileEdit({ token, currentName }: { token: string; currentName: strin
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Avatar Section */}
+      <div className="flex items-center gap-6">
+        <div className="relative group">
+          {avatar ? (
+            <img src={avatar} alt="Avatar" className="w-24 h-24 rounded-full object-cover" />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-[var(--accent-green)] flex items-center justify-center">
+              <User className="w-12 h-12 text-white" />
+            </div>
+          )}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+          >
+            {uploading ? (
+              <span className="text-white text-xs">Загрузка...</span>
+            ) : (
+              <span className="text-white text-xs">Изменить</span>
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarUpload}
+            className="hidden"
+          />
+        </div>
+        <div>
+          <p className="text-sm text-[var(--text-muted)]">Аватар профиля</p>
+          <p className="text-xs text-[var(--text-muted)]">JPG, PNG. Макс. 5MB</p>
+        </div>
+      </div>
+
+      {/* Name Section */}
       <div>
         <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
           Имя
