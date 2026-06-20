@@ -124,7 +124,8 @@ export async function GET(request: NextRequest) {
       role: user.role || "user",
     }, true);
 
-    const redirectUrl = new URL("/", request.url);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const redirectUrl = new URL("/", siteUrl);
     redirectUrl.searchParams.set("github_token", token);
     redirectUrl.searchParams.set("github_user", JSON.stringify({
       name: user.name,
@@ -136,8 +137,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   } catch (err) {
     console.error("GitHub OAuth error:", err);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     return NextResponse.redirect(
-      new URL("/login?error=github_auth_failed", request.url)
+      new URL("/login?error=github_auth_failed", siteUrl)
     );
   }
 }
