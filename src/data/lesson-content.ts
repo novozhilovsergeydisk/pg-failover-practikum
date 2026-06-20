@@ -273,6 +273,217 @@ export const LESSON_CONTENT: LessonContent[] = [
         command: "sudo -u postgres psql -d mydb -c \"CREATE TABLE test_replication (id serial, data text); INSERT INTO test_replication (data) VALUES ('test');\" && sudo -u postgres psql -h standby-ip -d mydb -c \"SELECT * FROM test_replication;\"",
         expectedOutput: " id |  data  \n----+--------\n  1 | test",
       },
+     ],
+  },
+  // Module 2
+  {
+    moduleId: 2,
+    lessonId: 1,
+    theory: [
+      "Слот репликации (replication slot) — это механизм PostgreSQL, который гарантирует, что мастер не удалит WAL-сегменты до тех пор, пока реплика их не получит.",
+      "Без слотов мастер может удалить WAL до того, как реплика успеет его применить — это приведёт к разрыву репликации.",
+      "Физические слоты работают на уровне WAL-сегментов и не зависят от логической структуры данных.",
+      "Слоты имеют два ключевых атрибута: restart_lsn (начальная точка чтения) и confirmed_flush_lsn (подтверждённая позиция).",
+    ],
+    practice: [
+      {
+        title: "Проверка текущих слотов",
+        description: "Посмотрите, какие слоты уже существуют:",
+        command: "sudo -u postgres psql -c \"SELECT slot_name, slot_type, active FROM pg_replication_slots;\"",
+        output: " slot_name | slot_type | active \n-----------+-----------+--------\n(0 rows)",
+      },
+      {
+        title: "Проверка WAL-файлов",
+        description: "Посмотрите доступные WAL-сегменты:",
+        command: "sudo -u postgres psql -c \"SELECT pg_ls_waldir();\"",
+        output: "     name     \n---------------\n 000000010000000000000001\n 000000010000000000000002\n(2 rows)",
+      },
+    ],
+    verification: [
+      {
+        description: "Убедитесь, что WAL-уровень поддерживает слоты:",
+        command: "sudo -u postgres psql -c \"SHOW wal_level;\"",
+        expectedOutput: " wal_level \n-----------\n replica",
+      },
+    ],
+  },
+  {
+    moduleId: 2,
+    lessonId: 2,
+    theory: [
+      "Физический слот создаётся командой pg_create_physical_replication_slot().",
+      "Имя слота должно быть уникальным и описательным (например, standby1_slot).",
+      "Сразу после создания слот неактивен — он начинает работать, когда реплика подключается к нему.",
+      "Параметр immediate_default определяет, будет ли слот немедленно доступен для синхронной репликации.",
+    ],
+    practice: [
+      {
+        title: "Создание слота для реплики",
+        description: "Создайте физический слот для подключения реплики:",
+        command: "sudo -u postgres psql -c \"SELECT pg_create_physical_replication_slot('standby1_slot');\"",
+        output: " pg_create_physical_replication_slot \n--------------------------------------\n standby1_slot\n(1 row)",
+      },
+      {
+        title: "Проверка созданного слота",
+        description: "Убедитесь, что слот создан и неактивен:",
+        command: "sudo -u postgres psql -c \"SELECT slot_name, slot_type, active, restart_lsn FROM pg_replication_slots;\"",
+        output: "   slot_name   | slot_type | active | restart_lsn \n---------------+-----------+--------+-------------\n standby1_slot | physical  | f      | 0/1000000",
+      },
+      {
+        title: "Создание второго слота",
+        description: "Создайте слот для второй реплики:",
+        command: "sudo -u postgres psql -c \"SELECT pg_create_physical_replication_slot('standby2_slot');\"",
+        output: " pg_create_physical_replication_slot \n--------------------------------------\n standby2_slot\n(1 row)",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что оба слота созданы:",
+        command: "sudo -u postgres psql -c \"SELECT count(*) as slot_count FROM pg_replication_slots;\"",
+        expectedOutput: " slot_count \n------------\n          2",
+      },
+    ],
+  },
+  {
+    moduleId: 2,
+    lessonId: 3,
+    theory: [
+      "Слот привязывается к реплике через параметр primary_slot_name в postgresql.conf реплики.",
+      "При подключении реплики слот становится активным (active = true).",
+      "Если реплика отключается, слот остаётся активным некоторое время (取决于 wal_sender_timeout).",
+      "Для перемещения слота между серверами нужно удалить его на старом сервере и создать на новом.",
+    ],
+    practice: [
+      {
+        title: "Настройка реплики на слот",
+        description: "На реплике добавьте параметр в postgresql.conf:",
+        command: "echo \"primary_slot_name = 'standby1_slot'\" | sudo tee -a /etc/postgresql/16/main/postgresql.conf",
+        output: "primary_slot_name = 'standby1_slot'",
+      },
+      {
+        title: "Перезапуск реплики",
+        description: "Перезапустите PostgreSQL на реплике для применения настроек:",
+        command: "sudo systemctl restart postgresql",
+        output: "",
+      },
+      {
+        title: "Проверка активности слота",
+        description: "На мастере проверьте, что слот теперь активен:",
+        command: "sudo -u postgres psql -c \"SELECT slot_name, active, active_pid FROM pg_replication_slots;\"",
+        output: "   slot_name   | active | active_pid \n---------------+--------+------------\n standby1_slot | t      |      12345",
+      },
+    ],
+    verification: [
+      {
+        description: "Убедитесь, что слот активен и привязан к процессу реплики:",
+        command: "sudo -u postgres psql -c \"SELECT s.slot_name, r.pid, r.application_name FROM pg_replication_slots s LEFT JOIN pg_stat_replication r ON s.active_pid = r.pid WHERE s.active = true;\"",
+        expectedOutput: "   slot_name   |  pid  | application_name \n---------------+-------+------------------\n standby1_slot | 12345 | walreceiver",
+      },
+    ],
+  },
+  {
+    moduleId: 2,
+    lessonId: 4,
+    theory: [
+      "Мониторинг слотов критически важен для предотвращения заполнения диска WAL-файлами.",
+      "Если слот неактивен太久, он накапливает WAL, которые не могут быть удалены.",
+      "Ключевые метрики: restart_lsn (начальная позиция), confirmed_flush_lsn (подтверждённая позиция), wal_status.",
+      "Используйте pg_stat_replication для отслеживания состояния подключённых реплик.",
+    ],
+    practice: [
+      {
+        title: "Подробная информация о слотах",
+        description: "Получите детальную информацию о всех слотах:",
+        command: "sudo -u postgres psql -c \"SELECT slot_name, active, restart_lsn, confirmed_flush_lsn, wal_status, safe_wal_size FROM pg_replication_slots;\"",
+        output: "   slot_name   | active | restart_lsn | confirmed_flush_lsn | wal_status | safe_wal_size \n---------------+--------+-------------+---------------------+------------+---------------\n standby1_slot | t      | 0/1000000   |                     | reserved   |       1048576",
+      },
+      {
+        title: "Размер WAL-бэклога",
+        description: "Проверьте, сколько WAL накоплено для слота:",
+        command: "sudo -u postgres psql -c \"SELECT slot_name, pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS restart_lag_bytes FROM pg_replication_slots WHERE active = true;\"",
+        output: "   slot_name   | restart_lag_bytes \n---------------+-------------------\n standby1_slot |              1024",
+      },
+      {
+        title: "Мониторинг через представление",
+        description: "Используйте встроенное представление для мониторинга:",
+        command: "sudo -u postgres psql -c \"SELECT * FROM pg_stat_replication;\"",
+        output: "  pid  | usesysid |  usename  | application_name | client_addr | ... \n-------+----------+-----------+------------------+-------------+-----\n 12345 |     1638 | replicator | walreceiver      | standby-ip  | ...",
+      },
+    ],
+    verification: [
+      {
+        description: "Убедитесь, что размер бэклога минимален:",
+        command: "sudo -u postgres psql -c \"SELECT slot_name, pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) < 10485760 AS is_healthy FROM pg_replication_slots WHERE active = true;\"",
+        expectedOutput: "   slot_name   | is_healthy \n---------------+------------\n standby1_slot | t",
+      },
+    ],
+  },
+  {
+    moduleId: 2,
+    lessonId: 5,
+    theory: [
+      "Неактивные слоты могут привести к заполнению диска, так как PostgreSQL не удаляет WAL, пока слот их требует.",
+      "Регулярно проверяйте и удаляйте неиспользуемые слоты.",
+      "Удаление слота безопасно, если реплика больше не подключена к нему.",
+      "Используйте pg_drop_physical_replication_slot() для удаления слотов.",
+    ],
+    practice: [
+      {
+        title: "Поиск неактивных слотов",
+        description: "Найдите слоты, которые не используются:",
+        command: "sudo -u postgres psql -c \"SELECT slot_name, active, pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS lag_bytes FROM pg_replication_slots WHERE active = false;\"",
+        output: " slot_name | active | lag_bytes \n-----------+--------+-----------\n(0 rows)",
+      },
+      {
+        title: "Удаление неактивного слота",
+        description: "Удалите слот, который больше не нужен:",
+        command: "sudo -u postgres psql -c \"SELECT pg_drop_replication_slot('standby2_slot');\"",
+        output: " pg_drop_replication_slot \n--------------------------\n(1 row)",
+      },
+      {
+        title: "Проверка после удаления",
+        description: "Убедитесь, что слот удалён:",
+        command: "sudo -u postgres psql -c \"SELECT slot_name FROM pg_replication_slots;\"",
+        output: "   slot_name   \n---------------\n standby1_slot\n(1 row)",
+      },
+    ],
+    verification: [
+      {
+        description: "Проверьте, что удалённый слот больше не существует:",
+        command: "sudo -u postgres psql -c \"SELECT count(*) FROM pg_replication_slots WHERE slot_name = 'standby2_slot';\"",
+        expectedOutput: " count \n-------\n     0",
+      },
+    ],
+  },
+  {
+    moduleId: 2,
+    lessonId: 6,
+    theory: [
+      "В этом задании вы создадите и настроите слоты для продакшен-сценария.",
+      "Настройте мониторинг слотов и алерты на заполнение диска.",
+      "Протестируйте поведение при отключении реплики.",
+      "Документируйте все настройки для административной команды.",
+    ],
+    practice: [
+      {
+        title: "Создание слотов для кластера",
+        description: "Создайте слоты для всех реплик кластера:",
+        command: "sudo -u postgres psql -c \"SELECT pg_create_physical_replication_slot('prod_standby1'); SELECT pg_create_physical_replication_slot('prod_standby2');\"",
+        output: " pg_create_physical_replication_slot \n--------------------------------------\n prod_standby1\n(1 row)\n\n pg_create_physical_replication_slot \n--------------------------------------\n prod_standby2\n(1 row)",
+      },
+      {
+        title: "Настройка мониторинга",
+        description: "Создайте скрипт мониторинга слотов:",
+        command: "cat > /usr/local/bin/monitor_slots.sh << 'EOF'\n#!/bin/bash\nsudo -u postgres psql -t -A -c \"SELECT slot_name, active, pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) FROM pg_replication_slots;\"\nEOF\nchmod +x /usr/local/bin/monitor_slots.sh",
+        output: "",
+      },
+    ],
+    verification: [
+      {
+        description: "Финальная проверка: все слоты созданы и настроены:",
+        command: "sudo -u postgres psql -c \"SELECT slot_name, slot_type, active FROM pg_replication_slots ORDER BY slot_name;\"",
+        expectedOutput: "   slot_name   | slot_type | active \n---------------+-----------+--------\n prod_standby1 | physical  | f\n prod_standby2 | physical  | f",
+      },
     ],
   },
 ];
