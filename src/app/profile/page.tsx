@@ -212,33 +212,106 @@ export default function ProfilePage() {
           </Card>
         </div>
 
-        {/* Settings */}
+        {/* Edit Profile */}
         <section className="mt-8">
           <Card>
             <CardHeader>
-              <CardTitle>Настройки</CardTitle>
+              <CardTitle>Настройки профиля</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="secondary">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Настройки профиля
-                </Button>
-                <Button variant="secondary">
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Мои сертификаты
-                </Button>
-                <Button variant="danger" onClick={() => { logout(); router.push("/"); }}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Выйти
-                </Button>
-              </div>
+              <ProfileEdit token={token || ""} currentName={userName} />
             </CardContent>
           </Card>
+        </section>
+
+        {/* Logout */}
+        <section className="mt-4">
+          <Button variant="danger" onClick={() => { logout(); router.push("/"); }}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Выйти
+          </Button>
         </section>
       </main>
 
       <Footer />
+    </div>
+  );
+}
+
+function ProfileEdit({ token, currentName }: { token: string; currentName: string }) {
+  const [name, setName] = useState(currentName);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    setName(currentName);
+  }, [currentName]);
+
+  const handleSave = async () => {
+    if (!name.trim() || saving) return;
+
+    setSaving(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("Имя успешно обновлено");
+        setIsError(false);
+        localStorage.setItem("auth", JSON.stringify({
+          ...JSON.parse(localStorage.getItem("auth") || "{}"),
+          name: name.trim(),
+        }));
+        window.location.reload();
+      } else {
+        setMessage(data.error || "Ошибка сохранения");
+        setIsError(true);
+      }
+    } catch {
+      setMessage("Ошибка сети");
+      setIsError(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+          Имя
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full px-3 py-2 rounded-md border border-[var(--border-primary)] bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-green)]"
+          placeholder="Ваше имя"
+        />
+      </div>
+
+      {message && (
+        <div className={`p-3 rounded-md text-sm ${
+          isError
+            ? "bg-[var(--accent-red)]/10 border border-[var(--accent-red)]/30 text-[var(--accent-red)]"
+            : "bg-[var(--accent-green)]/10 border border-[var(--accent-green)]/30 text-[var(--accent-green)]"
+        }`}>
+          {message}
+        </div>
+      )}
+
+      <Button onClick={handleSave} disabled={saving || !name.trim()}>
+        {saving ? "Сохранение..." : "Сохранить"}
+      </Button>
     </div>
   );
 }
