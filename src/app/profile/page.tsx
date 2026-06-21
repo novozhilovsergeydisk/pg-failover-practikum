@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Header, NavLink, useAuth } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { StatusIndicator } from "@/components/ui/status-indicator";
-import { User, BookOpen, Clock, Award, Settings, LogOut } from "lucide-react";
+import { User, BookOpen, Clock, Award, Settings, LogOut, ArrowRight } from "lucide-react";
 
 const MODULES = [
   { id: 1, title: "Основы потоковой репликации", lessonsCount: 8 },
@@ -111,6 +112,16 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Continue Learning */}
+        <div className="mb-8">
+          <Link href="/modules">
+            <Button className="w-full sm:w-auto">
+              Продолжить обучение
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
         </div>
 
         {/* Stats Grid */}
