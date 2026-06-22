@@ -79,7 +79,7 @@ REMOTE_COMMANDS="
   systemctl is-active --quiet $SYSTEMD_SERVICE && echo '    Сервис активен!' || echo '    ВНИМАНИЕ: Сервис не запустился!'
 "
 
-ssh "$SERVER_ALIAS" "$REMOTE_COMMANDS" || {
+ssh "root@$SERVER_ALIAS" "$REMOTE_COMMANDS" || {
   error "Ошибка при деплое на сервер!"
   exit 1
 }
