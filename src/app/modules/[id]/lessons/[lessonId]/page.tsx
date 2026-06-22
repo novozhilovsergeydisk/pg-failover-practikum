@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Database, Terminal, BookOpen, CheckCircle, Circle, Clock, Check, ArrowLeft, ArrowRight } from "lucide-react";
+import { Database, Terminal, BookOpen, CheckCircle, Circle, Clock, Check, ArrowLeft, ArrowRight, HelpCircle } from "lucide-react";
 import { getModule } from "@/data/modules";
 import { getLessonContent } from "@/data/lesson-content";
 
@@ -24,6 +24,7 @@ export default function LessonPage() {
   const { token } = useAuth();
   const [completedLessons, setCompletedLessons] = useState<Record<number, boolean>>({});
   const [completing, setCompleting] = useState(false);
+  const [quizPassed, setQuizPassed] = useState<boolean | null>(null);
 
   const module = getModule(moduleId);
   const lesson = module?.lessons.find((l) => l.id === lessonId);
@@ -44,6 +45,23 @@ export default function LessonPage() {
       })
       .catch(() => {});
   }, [token, moduleId]);
+
+  useEffect(() => {
+    if (!token || !moduleId || !lessonId) return;
+
+    fetch(`/api/quiz/results?moduleId=${moduleId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const result = data.results?.find(
+          (r: { module_id: number; lesson_id: number; passed: boolean }) =>
+            r.module_id === moduleId && r.lesson_id === lessonId
+        );
+        setQuizPassed(result?.passed ?? false);
+      })
+      .catch(() => setQuizPassed(false));
+  }, [token, moduleId, lessonId]);
 
   const handleComplete = async () => {
     if (!token || completing) return;
@@ -123,6 +141,18 @@ export default function LessonPage() {
                   </SidebarLink>
                 );
               })}
+            </SidebarSection>
+            <SidebarSection title="Викторина">
+              <SidebarLink
+                href={`/modules/${moduleId}/lessons/${lessonId}/quiz`}
+                active={false}
+                icon={quizPassed
+                  ? <CheckCircle className="w-4 h-4 text-[var(--accent-green)]" />
+                  : <HelpCircle className="w-4 h-4" />
+                }
+              >
+                {quizPassed ? "Викторина пройдена" : "Пройти викторину"}
+              </SidebarLink>
             </SidebarSection>
           </Sidebar>
 
@@ -268,28 +298,39 @@ export default function LessonPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-medium text-[var(--text-primary)]">
-                        Завершить этот урок
+                        {quizPassed ? "Завершить этот урок" : "Пройдите викторину"}
                       </h3>
                       <p className="text-sm text-[var(--text-muted)]">
-                        Отметьте урок как выполненный после практики
+                        {quizPassed
+                          ? "Отметьте урок как выполненный после практики"
+                          : "Для завершения урока необходимо пройти викторину"}
                       </p>
                     </div>
-                    <Button
-                      onClick={handleComplete}
-                      disabled={isCompleted || completing}
-                      variant={isCompleted ? "secondary" : "primary"}
-                    >
-                      {isCompleted ? (
-                        <>
-                          <Check className="w-4 h-4 mr-2" />
-                          Завершено
-                        </>
-                      ) : completing ? (
-                        "Отправка..."
-                      ) : (
-                        "Отметить как завершённый"
-                      )}
-                    </Button>
+                    {quizPassed ? (
+                      <Button
+                        onClick={handleComplete}
+                        disabled={isCompleted || completing}
+                        variant={isCompleted ? "secondary" : "primary"}
+                      >
+                        {isCompleted ? (
+                          <>
+                            <Check className="w-4 h-4 mr-2" />
+                            Завершено
+                          </>
+                        ) : completing ? (
+                          "Отправка..."
+                        ) : (
+                          "Отметить как завершённый"
+                        )}
+                      </Button>
+                    ) : (
+                      <Link href={`/modules/${moduleId}/lessons/${lessonId}/quiz`}>
+                        <Button>
+                          <HelpCircle className="w-4 h-4 mr-2" />
+                          Пройти викторину
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </CardContent>
               </Card>
