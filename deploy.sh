@@ -2,7 +2,7 @@
 
 # === Конфигурация ===
 SERVER_ALIAS="koderstudio"
-REMOTE_DIR="/var/www/pg-practikum-web"
+REMOTE_DIR="/var/www/pg-practikum"
 SYSTEMD_SERVICE="pg-practikum"
 LOGFILE="$HOME/logs/deploy-pg-practikum-web.log"
 
