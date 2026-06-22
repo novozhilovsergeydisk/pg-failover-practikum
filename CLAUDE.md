@@ -45,6 +45,29 @@ This version has breaking changes — APIs, conventions, и file structure may a
 - `chore:` — техническая работа
 - `deploy:` — деплой/инфраструктура
 
+## Деплой
+
+Скрипт: `./deploy.sh`
+
+### Использование
+```bash
+./deploy.sh "feat: описание изменений"
+```
+или без аргумента — скрипт запросит сообщение.
+
+### Сервер
+- **Хост:** koderstudio (146.185.235.4)
+- **Путь:** /var/www/pg-practikum-web
+- **Сервис:** pg-practikum-web (проверить имя: `ssh koderstudio systemctl list-units --type=service | grep prax`)
+
+### Порядок действий
+1. **Без моей отмашки — никаких коммитов, пушей и деплоев!**
+2. Вывести `git status && git diff`
+3. Показать анализ изменений в формате выше
+4. **Ждать явного «коммить» / «да» / «задеплой» от пользователя**
+5. Только после этого: `git add <файлы>` → `git commit` → `git push`
+6. Для деплоя: `./deploy.sh "сообщение"` (скрипт сам сделает add/commit/push/ssh)
+
 ## Безопасность
 
 - Никогда не коммитить .env файлы, пароли, токены, API-ключи
