@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "migrate:passwords": "node scripts/migrate-passwords.js",
-    "migrate:reset-token": "node scripts/add-reset-token-columns.js"
+    "migrate:reset-token": "node scripts/add-reset-token-columns.js",
+    "migrate:feedback": "node scripts/migrate-feedback.js"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.14",

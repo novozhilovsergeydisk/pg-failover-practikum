@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Database, ExternalLink, Mail, BookOpen, Terminal, Shield, GitBranch } from "lucide-react";
+import { Database, ExternalLink, Mail, BookOpen, Terminal, Shield, GitBranch, MessageSquare } from "lucide-react";
 
 export function Footer() {
   return (
@@ -74,6 +74,12 @@ export function Footer() {
                   <Mail className="w-4 h-4" />
                   Поддержка PostgreSQL
                 </a>
+              </li>
+              <li>
+                <Link href="/feedback" className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Обратная связь
+                </Link>
               </li>
             </ul>
           </div>
