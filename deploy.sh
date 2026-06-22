@@ -47,6 +47,24 @@ echo "========================================"
 info "1. Проверка изменений..."
 git status
 
+# 1.5 Проверка свободного места на сервере
+info "1.5 Проверка свободного места..."
+DISK_USAGE=$(ssh "root@$SERVER_ALIAS" "df -h /var | awk 'NR==2 {print \$5}' | tr -d '%'")
+if [ "$DISK_USAGE" -gt 90 ]; then
+  error "Мало места на диске: ${DISK_USAGE}% занято. Деплой отменён."
+  exit 1
+fi
+info "Диск: ${DISK_USAGE}% занято — достаточно места."
+
+# 1.6 Проверка версии Node.js на сервере
+info "1.6 Проверка версии Node.js..."
+NODE_VERSION=$(ssh "root@$SERVER_ALIAS" "node -v | tr -d 'v' | cut -d. -f1")
+if [ -z "$NODE_VERSION" ] || [ "$NODE_VERSION" -lt 20 ]; then
+  error "Требуется Node.js >= 20. На сервере: $(ssh "root@$SERVER_ALIAS" "node -v"). Деплой отменён."
+  exit 1
+fi
+info "Node.js $(ssh "root@$SERVER_ALIAS" "node -v") — OK."
+
 # 2. Коммит и пуш
 info "2. Фиксация изменений..."
 git add .
